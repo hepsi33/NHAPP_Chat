@@ -8,9 +8,9 @@ export default function AccountSettingsScreen() {
     const router = useRouter();
 
     const accountOptions = [
-        { id: 'privacy', title: 'Privacy', subtitle: 'Block contacts, disappearing messages', icon: Lock },
-        { id: 'security', title: 'Security', subtitle: 'Security notifications, show security code', icon: Key },
-        { id: 'email', title: 'Email Address', subtitle: 'Manage your connected email', icon: Mail },
+        { id: 'privacy', title: 'Privacy', subtitle: 'Block contacts, disappearing messages', icon: Lock, path: '/(main)/privacy' },
+        { id: 'security', title: 'Security', subtitle: 'Security notifications, show security code', icon: Key, path: '/(main)/security' },
+        { id: 'email', title: 'Email Address', subtitle: 'Manage your connected email', icon: Mail, path: '/(main)/email' },
     ];
 
     return (
@@ -24,7 +24,7 @@ export default function AccountSettingsScreen() {
 
             <View style={styles.optionsList}>
                 {accountOptions.map((option) => (
-                    <TouchableOpacity key={option.id} style={styles.optionItem}>
+                    <TouchableOpacity key={option.id} style={styles.optionItem} onPress={() => router.push(option.path as any)}>
                         <View style={styles.iconContainer}>
                             <option.icon color={Colors.secondaryText} size={24} />
                         </View>

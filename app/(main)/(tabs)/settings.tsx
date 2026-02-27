@@ -50,7 +50,7 @@ export default function SettingsScreen() {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(main)/status-settings')}>
                         <User size={24} color={Colors.primary} />
                         <View style={styles.menuText}>
                             <Text style={styles.menuTitle}>Status</Text>
@@ -58,7 +58,7 @@ export default function SettingsScreen() {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(main)/notifications')}>
                         <Bell size={24} color={Colors.primary} />
                         <View style={styles.menuText}>
                             <Text style={styles.menuTitle}>Notifications</Text>
@@ -66,7 +66,7 @@ export default function SettingsScreen() {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(main)/help')}>
                         <HelpCircle size={24} color={Colors.primary} />
                         <View style={styles.menuText}>
                             <Text style={styles.menuTitle}>Help</Text>
