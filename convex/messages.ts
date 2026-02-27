@@ -1,0 +1,62 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+
+// Send a message
+export const sendMessage = mutation({
+    args: {
+        chatId: v.id("chats"),
+        senderId: v.string(),
+        text: v.string(),
+        type: v.optional(v.union(v.literal("text"), v.literal("image"), v.literal("audio"), v.literal("video"))),
+        fileId: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const id = await ctx.db.insert("messages", {
+            chatId: args.chatId,
+            senderId: args.senderId,
+            text: args.text,
+            type: args.type || "text",
+            fileId: args.fileId,
+            status: "sent",
+            createdAt: Date.now(),
+        });
+
+        // Update chat timestamp
+        const chat = await ctx.db.get(args.chatId);
+        if (chat) {
+            await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
+        }
+
+        return id;
+    },
+});
+
+// Get messages for a chat
+export const getMessages = query({
+    args: { chatId: v.id("chats") },
+    handler: async (ctx, args) => {
+        const msgs = await ctx.db
+            .query("messages")
+            .withIndex("by_chat", q => q.eq("chatId", args.chatId))
+            .order("desc")
+            .take(100);
+        return msgs;
+    },
+});
+
+// Mark messages as read
+export const markRead = mutation({
+    args: { chatId: v.id("chats"), userId: v.string() },
+    handler: async (ctx, args) => {
+        const msgs = await ctx.db
+            .query("messages")
+            .withIndex("by_chat", q => q.eq("chatId", args.chatId))
+            .collect();
+
+        for (const msg of msgs) {
+            if (msg.senderId !== args.userId && msg.status !== "read") {
+                await ctx.db.patch(msg._id, { status: "read" });
+            }
+        }
+    },
+});
