@@ -145,19 +145,24 @@ export default function ChatScreen() {
     const uploadImage = async (uri: string, chatId: string, senderId: string) => {
         setIsUploading(true);
         try {
+            // Clean up the URI - remove file:// prefix if present
+            const cleanUri = uri.startsWith('file://') ? uri.slice(7) : uri;
+            
             // Get upload URL from Convex
             const uploadUrl = await generateUploadUrl({});
             console.log("Got upload URL:", uploadUrl);
             
-            // Upload to Convex storage
-            const response = await fetch(uri);
-            const blob = await response.blob();
-            console.log("Got blob:", blob.size, blob.type);
+            // Create FormData for React Native
+            const formData = new FormData();
+            formData.append('file', {
+                uri: cleanUri,
+                type: 'image/jpeg',
+                name: 'photo.jpg',
+            } as any);
             
             const uploadResult = await fetch(uploadUrl, {
                 method: "POST",
-                headers: { "Content-Type": "image/jpeg" },
-                body: blob,
+                body: formData,
             });
             
             console.log("Upload result:", uploadResult.status);
@@ -171,10 +176,11 @@ export default function ChatScreen() {
             const resultJson = await uploadResult.json();
             console.log("Upload response:", resultJson);
             
-            // Convex returns { storageId: "..." }
-            const storageId = resultJson.storageId || resultJson.id;
+            // Check for various possible storage ID field names
+            const storageId = resultJson.storageId || resultJson.storageID || resultJson.id || resultJson.fileId;
             
             if (!storageId) {
+                console.error("No storage ID in response:", resultJson);
                 throw new Error("No storage ID returned");
             }
             
