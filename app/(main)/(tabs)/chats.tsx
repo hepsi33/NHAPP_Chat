@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { Lock, MessageSquare, Users } from 'lucide-react-native';
+import { Lock, MessageSquare, Star, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -164,6 +164,11 @@ export default function ChatsScreen() {
                     placeholderTextColor="#A0A0A0"
                 />
             </View>
+
+            <TouchableOpacity style={styles.lockedChatsContainer} onPress={() => router.push('/(main)/starred-messages')}>
+                <Star size={20} color={Colors.primary} style={{ marginRight: 15 }} />
+                <Text style={styles.lockedChatsText}>Starred messages</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.lockedChatsContainer} onPress={() => router.push('/(main)/locked-chats')}>
                 <Lock size={20} color={Colors.primary} style={{ marginRight: 15 }} />

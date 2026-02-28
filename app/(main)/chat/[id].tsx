@@ -35,6 +35,9 @@ export default function ChatScreen() {
     const markRead = useMutation(api.messages.markRead);
     const setTyping = useMutation((api as any).typing.setTyping);
     const deleteMessage = useMutation((api as any).messages.deleteMessage);
+    const addReaction = useMutation((api as any).reactions.addReaction);
+    const starMessage = useMutation((api as any).reactions.starMessage);
+    const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
 
     useEffect(() => {
         if (messagesData) {
@@ -197,6 +200,38 @@ export default function ChatScreen() {
         }
     };
 
+    const handleAddReaction = async (messageId: string, emoji: string) => {
+        if (!user) return;
+        await addReaction({ messageId: messageId as Id<"messages">, emoji, userId: user.uid });
+        setShowReactionPicker(null);
+    };
+
+    const handleStarMessage = async (messageId: string) => {
+        if (!user || !id) return;
+        await starMessage({ messageId: messageId as Id<"messages">, chatId: id as Id<"chats">, userId: user.uid });
+        Alert.alert("Starred", "Message has been starred.");
+    };
+
+    const handleMessageOptions = (item: any) => {
+        const options = ["React"];
+        
+        Alert.alert(
+            "Message",
+            undefined,
+            [
+                ...options.map(opt => ({
+                    text: opt,
+                    onPress: () => {
+                        if (opt === "React") setShowReactionPicker(item._id);
+                        if (opt === "Star") handleStarMessage(item._id);
+                        if (opt === "Delete" && item.senderId === user?.uid) handleDeleteMessage(item._id);
+                    }
+                })),
+                { text: "Cancel", style: "cancel" }
+            ]
+        );
+    };
+
     const renderMessage = ({ item }: { item: any }) => {
         const isMe = item.senderId === user?.uid;
         const isImage = item.type === 'image';
@@ -205,7 +240,7 @@ export default function ChatScreen() {
             <TouchableOpacity 
                 onPress={() => isImage && setSelectedImage(item.text)}
                 disabled={!isImage}
-                onLongPress={() => isMe && handleDeleteMessage(item._id)}
+                onLongPress={() => handleMessageOptions(item)}
             >
                 <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
                     {isImage ? (
@@ -227,6 +262,13 @@ export default function ChatScreen() {
                             </Text>
                         )}
                     </View>
+                    {item.reactions && item.reactions.length > 0 && (
+                        <View style={styles.reactionsContainer}>
+                            {item.reactions.map((r: any, idx: number) => (
+                                <Text key={idx} style={styles.reactionEmoji}>{r.emoji}</Text>
+                            ))}
+                        </View>
+                    )}
                 </View>
             </TouchableOpacity>
         );
@@ -496,5 +538,13 @@ const styles = StyleSheet.create({
     fullImage: {
         width: '100%',
         height: '80%',
+    },
+    reactionsContainer: {
+        flexDirection: 'row',
+        marginTop: 4,
+    },
+    reactionEmoji: {
+        fontSize: 14,
+        marginRight: 4,
     },
 });

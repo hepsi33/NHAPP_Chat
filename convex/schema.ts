@@ -36,6 +36,8 @@ export default defineSchema({
     type: v.union(v.literal("text"), v.literal("image"), v.literal("audio"), v.literal("video")),
     fileId: v.optional(v.string()),
     status: v.union(v.literal("sent"), v.literal("delivered"), v.literal("read")),
+    reactions: v.optional(v.array(v.object({ emoji: v.string(), userId: v.string() }))),
+    replyTo: v.optional(v.id("messages")),
     createdAt: v.number(),
   }).index("by_chat", ["chatId"])
     .index("by_createdAt", ["createdAt"]),
@@ -64,4 +66,18 @@ export default defineSchema({
     isTyping: v.boolean(),
     updatedAt: v.number(),
   }).index("by_chat", ["chatId"]),
+
+  starredMessages: defineTable({
+    userId: v.string(),
+    messageId: v.id("messages"),
+    chatId: v.id("chats"),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_user_chat", ["userId", "chatId"]),
+
+  chatWallpapers: defineTable({
+    chatId: v.id("chats"),
+    wallpaper: v.optional(v.string()),
+    updatedAt: v.number(),
+  }),
 });
