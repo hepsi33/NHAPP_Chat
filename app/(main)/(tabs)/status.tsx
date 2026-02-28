@@ -61,7 +61,6 @@ export default function StatusScreen() {
             setUploading(true);
             try {
                 // Get upload URL
-                const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
                 const uploadUrl = await generateUploadUrl({});
                 
                 const uri = result.assets[0].uri;
