@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useAction, useQuery } from "convex/react";
 import { useRouter } from 'expo-router';
 import { Mail, Search, UserPlus, User, Send } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -45,7 +45,7 @@ export default function NewChatScreen() {
 
     const createChat = useMutation(api.chats.createPrivateChat);
     const addContact = useMutation(api.contacts.addContact);
-    const sendInvite = useMutation(api.auth.sendInvite);
+    const sendInvite = useAction(api.auth.sendInvite);
     const existingChats = useQuery(api.chats.getUserChats, { userId: currentUser?.uid || "" }) || [];
 
     const isEmailFormat = debouncedSearch.includes('@') && debouncedSearch.includes('.');

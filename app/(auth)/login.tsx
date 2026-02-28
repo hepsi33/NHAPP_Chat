@@ -1,4 +1,4 @@
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -10,7 +10,7 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
 
     const router = useRouter();
-    const sendOTP = useMutation(api.auth.sendOTP);
+    const sendOTP = useAction(api.auth.sendOTP);
 
     const handleSendOTP = async () => {
         if (!email || !email.includes('@')) {

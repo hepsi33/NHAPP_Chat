@@ -1,17 +1,16 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-
-// Initialize Resend with API key
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+import { action, query } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
 const OTPs = new Map<string, { code: string; expires: number; name?: string }>();
 const invites = new Map<string, { fromEmail: string; fromName: string; expires: number }>();
 
 async function sendEmail(to: string, subject: string, html: string) {
+    const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+    
     if (!RESEND_API_KEY) {
         console.log(`[DEV MODE] Email would be sent to: ${to}`);
         console.log(`[DEV MODE] Subject: ${subject}`);
-        console.log(`[DEV MODE] Body: ${html}`);
         return { success: true, devMode: true };
     }
 
@@ -43,7 +42,28 @@ async function sendEmail(to: string, subject: string, html: string) {
     }
 }
 
-export const sendOTP = mutation({
+// Internal mutation to create user
+const _internalCreateUser = internalMutation({
+    args: {
+        email: v.string(),
+        name: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const userId = args.email + "_" + Date.now();
+        const id = await ctx.db.insert("users", {
+            userId,
+            email: args.email,
+            name: args.name,
+            status: "Hey there! I'm using NHAPP",
+            isOnline: true,
+            lastSeen: Date.now(),
+            createdAt: Date.now(),
+        });
+        return id;
+    },
+});
+
+export const sendOTP = action({
     args: {
         email: v.string(),
         name: v.optional(v.string()),
@@ -56,7 +76,7 @@ export const sendOTP = mutation({
         }
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        const expires = Date.now() + 10 * 60 * 1000;
 
         OTPs.set(email, { code, expires, name: args.name });
 
@@ -96,7 +116,7 @@ export const sendOTP = mutation({
     },
 });
 
-export const verifyOTP = mutation({
+export const verifyOTP = action({
     args: {
         email: v.string(),
         code: v.string(),
@@ -120,6 +140,7 @@ export const verifyOTP = mutation({
 
         OTPs.delete(email);
 
+        // Check if user exists
         const existingUser = await ctx.db
             .query("users")
             .withIndex("by_email", (q) => q.eq("email", email))
@@ -161,7 +182,7 @@ export const verifyOTP = mutation({
     },
 });
 
-export const resendOTP = mutation({
+export const resendOTP = action({
     args: { email: v.string() },
     handler: async (ctx, args) => {
         const email = args.email.toLowerCase();
@@ -212,7 +233,7 @@ export const resendOTP = mutation({
     },
 });
 
-export const sendInvite = mutation({
+export const sendInvite = action({
     args: {
         fromEmail: v.string(),
         fromName: v.string(),

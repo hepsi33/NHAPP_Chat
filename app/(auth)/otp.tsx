@@ -1,4 +1,4 @@
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -13,8 +13,8 @@ export default function OTPScreen() {
     const router = useRouter();
     const setUser = useAuthStore((state) => state.setUser);
 
-    const verifyOTP = useMutation(api.auth.verifyOTP);
-    const resendOTP = useMutation(api.auth.resendOTP);
+    const verifyOTP = useAction(api.auth.verifyOTP);
+    const resendOTP = useAction(api.auth.resendOTP);
 
     const handleVerify = async () => {
         if (!token || token.length !== 6) {
