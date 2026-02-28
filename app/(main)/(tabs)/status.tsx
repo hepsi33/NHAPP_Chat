@@ -51,6 +51,10 @@ export default function StatusScreen() {
     };
 
     const showAddOptions = () => {
+        if (!user) {
+            Alert.alert("Error", "Please log in to post a status.");
+            return;
+        }
         Alert.alert(
             "Add Status",
             "What would you like to share?",
@@ -73,22 +77,33 @@ export default function StatusScreen() {
         );
     }
 
-    const renderStatusItem = ({ item }: { item: any }) => (
-        <TouchableOpacity style={styles.statusItem}>
-            <View style={styles.statusRing}>
-                <Image
-                    source={{ uri: item.user?.avatar || 'https://via.placeholder.com/150' }}
-                    style={styles.statusAvatar}
-                />
-            </View>
-            <View style={styles.statusInfo}>
-                <Text style={styles.statusName}>{item.user?.name || 'User'}</Text>
-                <Text style={styles.statusTime}>
-                    {item.statuses?.length || 0} status updates • {item.statuses?.[item.statuses.length - 1] ? new Date(item.statuses[item.statuses.length - 1].createdAt).toLocaleTimeString() : ''}
-                </Text>
-            </View>
-        </TouchableOpacity>
-    );
+    const renderStatusItem = ({ item }: { item: any }) => {
+        const latestStatus = item.statuses?.[item.statuses.length - 1];
+        const isTextStatus = latestStatus?.type === 'text';
+        
+        return (
+            <TouchableOpacity style={styles.statusItem}>
+                <View style={styles.statusRing}>
+                    <Image
+                        source={{ uri: item.user?.avatar || 'https://via.placeholder.com/150' }}
+                        style={styles.statusAvatar}
+                    />
+                </View>
+                <View style={styles.statusInfo}>
+                    <Text style={styles.statusName}>{item.user?.name || 'User'}</Text>
+                    {isTextStatus && latestStatus?.text ? (
+                        <Text style={styles.statusPreview} numberOfLines={1}>
+                            {latestStatus.text}
+                        </Text>
+                    ) : (
+                        <Text style={styles.statusTime}>
+                            {item.statuses?.length || 0} status update{item.statuses?.length !== 1 ? 's' : ''} • {latestStatus ? new Date(latestStatus.createdAt).toLocaleTimeString() : ''}
+                        </Text>
+                    )}
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -261,6 +276,11 @@ const styles = StyleSheet.create({
     statusTime: {
         fontSize: 13,
         color: Colors.secondaryText,
+    },
+    statusPreview: {
+        fontSize: 13,
+        color: Colors.primary,
+        marginTop: 2,
     },
     emptyContainer: {
         flex: 1,

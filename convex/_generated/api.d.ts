@@ -11,8 +11,11 @@
 import type * as chats from "../chats.js";
 import type * as contacts from "../contacts.js";
 import type * as messages from "../messages.js";
+import type * as presence from "../presence.js";
+import type * as reactions from "../reactions.js";
 import type * as status from "../status.js";
 import type * as storage from "../storage.js";
+import type * as typing from "../typing.js";
 import type * as users from "../users.js";
 
 import type {
@@ -25,8 +28,11 @@ declare const fullApi: ApiFromModules<{
   chats: typeof chats;
   contacts: typeof contacts;
   messages: typeof messages;
+  presence: typeof presence;
+  reactions: typeof reactions;
   status: typeof status;
   storage: typeof storage;
+  typing: typeof typing;
   users: typeof users;
 }>;
 

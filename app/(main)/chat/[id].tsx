@@ -41,7 +41,6 @@ export default function ChatScreen() {
     const starMessage = useMutation((api as any).reactions.starMessage);
     const setWallpaper = useMutation((api as any).reactions.setWallpaper);
     const generateUploadUrl = useMutation((api as any).storage.generateUploadUrl);
-    const getImageUrl = useMutation((api as any).storage.getImageUrl);
     const markImageViewed = useMutation((api as any).messages.markImageViewed);
     const deleteImageFile = useMutation((api as any).messages.deleteImageFile);
     
@@ -148,10 +147,12 @@ export default function ChatScreen() {
         try {
             // Get upload URL from Convex
             const uploadUrl = await generateUploadUrl({});
+            console.log("Got upload URL:", uploadUrl);
             
             // Upload to Convex storage
             const response = await fetch(uri);
             const blob = await response.blob();
+            console.log("Got blob:", blob.size, blob.type);
             
             const uploadResult = await fetch(uploadUrl, {
                 method: "POST",
@@ -159,22 +160,36 @@ export default function ChatScreen() {
                 body: blob,
             });
             
+            console.log("Upload result:", uploadResult.status);
+            
             if (!uploadResult.ok) {
-                throw new Error("Upload failed");
+                const errorText = await uploadResult.text();
+                console.error("Upload failed:", errorText);
+                throw new Error("Upload failed: " + uploadResult.status);
             }
             
-            const { storageId } = await uploadResult.json();
+            const resultJson = await uploadResult.json();
+            console.log("Upload response:", resultJson);
+            
+            // Convex returns { storageId: "..." }
+            const storageId = resultJson.storageId || resultJson.id;
+            
+            if (!storageId) {
+                throw new Error("No storage ID returned");
+            }
             
             // Send message with storage ID
             await sendMessage({
                 chatId: chatId as Id<"chats">,
                 senderId: senderId,
-                text: storageId, // Store the storage ID, not the URI
+                text: storageId,
                 type: "image",
             });
-        } catch (error) {
+            
+            Alert.alert("Success", "Image sent!");
+        } catch (error: any) {
             console.error("Upload error:", error);
-            Alert.alert("Error", "Failed to send image. Please try again.");
+            Alert.alert("Error", "Failed to send image: " + error.message);
         } finally {
             setIsUploading(false);
         }
@@ -355,7 +370,7 @@ export default function ChatScreen() {
         const isImage = item.type === 'image';
         
         // For images stored in Convex, we'll try to get the URL
-        const imageUri = isImage ? (item.text.startsWith('http') ? item.text : `https://doting-gull-823.convex.cloud/api/storage/${item.text}`) : null;
+        const imageUri = isImage ? (item.text.startsWith('http') ? item.text : `https://doting-gull-823.convex.cloud/api/storage/get/${item.text}`) : null;
         
         return (
             <TouchableOpacity 
@@ -495,7 +510,7 @@ export default function ChatScreen() {
                     </TouchableOpacity>
                     {selectedImage && (
                         <Image 
-                            source={{ uri: selectedImage.startsWith('http') ? selectedImage : `https://doting-gull-823.convex.cloud/api/storage/${selectedImage}` }} 
+                            source={{ uri: selectedImage.startsWith('http') ? selectedImage : `https://doting-gull-823.convex.cloud/api/storage/get/${selectedImage}` }} 
                             style={styles.fullImage}
                             resizeMode="contain"
                         />
