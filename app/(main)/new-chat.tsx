@@ -63,7 +63,7 @@ export default function NewChatScreen() {
             if (result.success) {
                 Alert.alert(
                     "Invite Sent!",
-                    `Your invite has been sent to ${debouncedSearch}.\n\nIn production, an email would be sent with invite code: ${result.inviteCode}`,
+                    `Your invitation has been sent to ${debouncedSearch}. They will receive an email to join NHAPP!`,
                     [{ text: "OK" }]
                 );
             }

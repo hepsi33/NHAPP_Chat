@@ -9,42 +9,60 @@ import { useAuthStore } from '../../store/useAuthStore';
 export default function OTPScreen() {
     const [token, setToken] = useState('');
     const [loading, setLoading] = useState(false);
-    const { email, name } = useLocalSearchParams<{ email: string; name: string }>();
+    const { email, name, mode } = useLocalSearchParams<{ email: string; name: string; mode: string }>();
     const router = useRouter();
     const setUser = useAuthStore((state) => state.setUser);
 
-    const createOrGetUser = useMutation(api.users.createOrGetUser);
+    const verifyOTP = useMutation(api.auth.verifyOTP);
+    const resendOTP = useMutation(api.auth.resendOTP);
 
     const handleVerify = async () => {
-        if (!token || token !== '123456') {
-            Alert.alert('Invalid Code', 'Please enter "123456" to continue (dev mode).');
+        if (!token || token.length !== 6) {
+            Alert.alert('Invalid Code', 'Please enter the 6-digit code sent to your email.');
+            return;
+        }
+
+        if (!email) {
+            Alert.alert('Error', 'Email not found. Please start over.');
             return;
         }
 
         setLoading(true);
 
         try {
-            const user = await createOrGetUser({ 
-                email: email || 'test@example.com', 
-                name: name || 'Test User' 
+            const result = await verifyOTP({ 
+                email, 
+                code: token 
             });
 
-            if (!user) {
-                Alert.alert('Error', 'Could not create user.');
-                setLoading(false);
-                return;
+            if (result.user) {
+                setUser({
+                    uid: result.user.userId,
+                    email: result.user.email,
+                    displayName: result.user.name || null,
+                    photoURL: result.user.avatar || null,
+                });
+
+                router.replace('/(main)/(tabs)/chats');
+            } else {
+                Alert.alert('Error', 'Verification failed. Please try again.');
             }
-
-            setUser({
-                uid: user.userId,
-                email: user.email,
-                displayName: user.name || null,
-                photoURL: user.avatar || null,
-            });
-
-            router.replace('/(main)/(tabs)/chats');
         } catch (err: any) {
-            Alert.alert('Error', err.message || 'An unexpected error occurred.');
+            Alert.alert('Error', err.message || 'Invalid or expired code. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        if (!email) return;
+
+        setLoading(true);
+        try {
+            await resendOTP({ email });
+            Alert.alert('Code Sent', 'A new verification code has been sent to your email.');
+        } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to resend code.');
         } finally {
             setLoading(false);
         }
@@ -56,9 +74,10 @@ export default function OTPScreen() {
             style={styles.container}
         >
             <View style={styles.inner}>
-                <Text style={styles.title}>Enter Code</Text>
+                <Text style={styles.title}>Verify Your Email</Text>
                 <Text style={styles.subtitle}>
-                    Enter "123456" to continue{"\n"}(dev mode)
+                    We've sent a verification code to{"\n"}
+                    <Text style={{ fontWeight: 'bold', color: Colors.primary }}>{email}</Text>
                 </Text>
 
                 <TextInput
@@ -76,7 +95,17 @@ export default function OTPScreen() {
                     onPress={handleVerify}
                     disabled={token.length < 6 || loading}
                 >
-                    <Text style={styles.buttonText}>{loading ? 'Please wait...' : 'CONTINUE'}</Text>
+                    <Text style={styles.buttonText}>{loading ? 'Verifying...' : 'Verify'}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    style={styles.resendButton} 
+                    onPress={handleResend}
+                    disabled={loading}
+                >
+                    <Text style={styles.resendText}>
+                        Didn't receive the code? <Text style={styles.resendLink}>Resend</Text>
+                    </Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
@@ -136,5 +165,16 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontWeight: 'bold',
         fontSize: 16,
+    },
+    resendButton: {
+        marginTop: 30,
+    },
+    resendText: {
+        color: Colors.secondaryText,
+        fontSize: 14,
+    },
+    resendLink: {
+        color: Colors.primary,
+        fontWeight: '600',
     },
 });
