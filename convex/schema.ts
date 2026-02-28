@@ -35,7 +35,7 @@ export default defineSchema({
     text: v.string(),
     type: v.union(v.literal("text"), v.literal("image"), v.literal("audio"), v.literal("video")),
     fileId: v.optional(v.string()),
-    status: v.union(v.literal("sent"), v.literal("delivered"), v.literal("read")),
+    status: v.union(v.literal("sent"), v.literal("delivered"), v.literal("read"), v.literal("viewed")),
     reactions: v.optional(v.array(v.object({ emoji: v.string(), userId: v.string() }))),
     replyTo: v.optional(v.id("messages")),
     createdAt: v.number(),

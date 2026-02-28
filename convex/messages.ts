@@ -98,3 +98,32 @@ export const markDelivered = mutation({
         }
     },
 });
+
+// Mark image as viewed (for auto-delete feature)
+export const markImageViewed = mutation({
+    args: { messageId: v.id("messages") },
+    handler: async (ctx, args) => {
+        const msg = await ctx.db.get(args.messageId);
+        if (msg && msg.type === "image") {
+            await ctx.db.patch(args.messageId, { status: "viewed" });
+        }
+    },
+});
+
+// Delete image file from storage
+export const deleteImageFile = mutation({
+    args: { messageId: v.id("messages") },
+    handler: async (ctx, args) => {
+        const msg = await ctx.db.get(args.messageId);
+        if (msg && msg.type === "image" && msg.text) {
+            // Try to delete from storage
+            try {
+                await ctx.storage.delete(msg.text);
+            } catch (e) {
+                console.log("Storage delete error:", e);
+            }
+            // Delete the message
+            await ctx.db.delete(args.messageId);
+        }
+    },
+});

@@ -17,6 +17,7 @@ export default function ChatScreen() {
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const chat = useQuery(api.chats.getChat, {
@@ -39,6 +40,10 @@ export default function ChatScreen() {
     const addReaction = useMutation((api as any).reactions.addReaction);
     const starMessage = useMutation((api as any).reactions.starMessage);
     const setWallpaper = useMutation((api as any).reactions.setWallpaper);
+    const generateUploadUrl = useMutation((api as any).storage.generateUploadUrl);
+    const getImageUrl = useMutation((api as any).storage.getImageUrl);
+    const markImageViewed = useMutation((api as any).messages.markImageViewed);
+    const deleteImageFile = useMutation((api as any).messages.deleteImageFile);
     
     const wallpaperData = useQuery((api as any).reactions.getWallpaper, id ? { chatId: id } : "skip");
     const [chatWallpaper, setChatWallpaper] = useState<string | null>(null);
@@ -115,12 +120,7 @@ export default function ChatScreen() {
         });
 
         if (!result.canceled && result.assets[0]) {
-            await sendMessage({
-                chatId: id as Id<"chats">,
-                senderId: user.uid,
-                text: result.assets[0].uri,
-                type: "image",
-            });
+            await uploadImage(result.assets[0].uri, id as string, user.uid);
         }
     };
 
@@ -136,16 +136,78 @@ export default function ChatScreen() {
             });
 
             if (!result.canceled && result.assets[0]) {
-                await sendMessage({
-                    chatId: id as Id<"chats">,
-                    senderId: user.uid,
-                    text: result.assets[0].uri,
-                    type: "image",
-                });
+                await uploadImage(result.assets[0].uri, id as string, user.uid);
             }
         } else {
             Alert.alert("Permission Required", "Please grant camera permission to take photos.");
         }
+    };
+
+    const uploadImage = async (uri: string, chatId: string, senderId: string) => {
+        setIsUploading(true);
+        try {
+            // Get upload URL from Convex
+            const uploadUrl = await generateUploadUrl({});
+            
+            // Upload to Convex storage
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            
+            const uploadResult = await fetch(uploadUrl, {
+                method: "POST",
+                headers: { "Content-Type": "image/jpeg" },
+                body: blob,
+            });
+            
+            if (!uploadResult.ok) {
+                throw new Error("Upload failed");
+            }
+            
+            const { storageId } = await uploadResult.json();
+            
+            // Send message with storage ID
+            await sendMessage({
+                chatId: chatId as Id<"chats">,
+                senderId: senderId,
+                text: storageId, // Store the storage ID, not the URI
+                type: "image",
+            });
+        } catch (error) {
+            console.error("Upload error:", error);
+            Alert.alert("Error", "Failed to send image. Please try again.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    // Handle viewing image - mark as viewed and delete if from self (like WhatsApp)
+    const handleImagePress = async (item: any) => {
+        setSelectedImage(item.text);
+        
+        // If I'm the sender and image hasn't been viewed by recipient, mark as viewed
+        if (item.senderId === user?.uid && item.status !== 'viewed') {
+            try {
+                await markImageViewed({ messageId: item._id });
+            } catch (e) {
+                console.log("Error marking image viewed:", e);
+            }
+        }
+    };
+
+    // When closing image viewer, check if we should delete the image (WhatsApp style)
+    const handleCloseImageViewer = async () => {
+        const imageMsg = messages.find(m => m.text === selectedImage && m.type === 'image');
+        
+        // If sender is viewing and recipient has seen it, delete the image
+        if (imageMsg && imageMsg.senderId === user?.uid && imageMsg.status === 'viewed') {
+            try {
+                await deleteImageFile({ messageId: imageMsg._id });
+            } catch (e) {
+                console.log("Error deleting image:", e);
+            }
+        }
+        
+        setSelectedImage(null);
     };
 
     const showAttachmentOptions = () => {
@@ -207,6 +269,7 @@ export default function ChatScreen() {
             case 'sent': return '✓';
             case 'delivered': return '✓✓';
             case 'read': return '✓✓';
+            case 'viewed': return '👁️';
             default: return '';
         }
     };
@@ -291,16 +354,19 @@ export default function ChatScreen() {
         const isMe = item.senderId === user?.uid;
         const isImage = item.type === 'image';
         
+        // For images stored in Convex, we'll try to get the URL
+        const imageUri = isImage ? (item.text.startsWith('http') ? item.text : `https://doting-gull-823.convex.cloud/api/storage/${item.text}`) : null;
+        
         return (
             <TouchableOpacity 
-                onPress={() => isImage && setSelectedImage(item.text)}
+                onPress={() => isImage && handleImagePress(item)}
                 disabled={!isImage}
                 onLongPress={() => handleMessageOptions(item)}
             >
                 <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
                     {isImage ? (
                         <Image 
-                            source={{ uri: item.text }} 
+                            source={{ uri: imageUri || item.text }}
                             style={styles.messageImage}
                             resizeMode="cover"
                         />
@@ -418,18 +484,18 @@ export default function ChatScreen() {
                 visible={!!selectedImage}
                 transparent
                 animationType="fade"
-                onRequestClose={() => setSelectedImage(null)}
+                onRequestClose={handleCloseImageViewer}
             >
                 <View style={styles.imageViewerContainer}>
                     <TouchableOpacity 
                         style={styles.closeButton}
-                        onPress={() => setSelectedImage(null)}
+                        onPress={handleCloseImageViewer}
                     >
                         <X size={28} color="#FFF" />
                     </TouchableOpacity>
                     {selectedImage && (
                         <Image 
-                            source={{ uri: selectedImage }} 
+                            source={{ uri: selectedImage.startsWith('http') ? selectedImage : `https://doting-gull-823.convex.cloud/api/storage/${selectedImage}` }} 
                             style={styles.fullImage}
                             resizeMode="contain"
                         />
