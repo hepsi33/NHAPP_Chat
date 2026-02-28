@@ -1,8 +1,8 @@
 import { useMutation, useQuery } from "convex/react";
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Send as SendIcon, ChevronLeft, Plus, X } from 'lucide-react-native';
+import { Send as SendIcon, ChevronLeft, Plus, X, MoreVertical, Image as ImageIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Clipboard, FlatList, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../../constants/Colors';
 import { api } from "../../../convex/_generated/api";
@@ -37,7 +37,17 @@ export default function ChatScreen() {
     const deleteMessage = useMutation((api as any).messages.deleteMessage);
     const addReaction = useMutation((api as any).reactions.addReaction);
     const starMessage = useMutation((api as any).reactions.starMessage);
+    const setWallpaper = useMutation((api as any).reactions.setWallpaper);
+    
+    const wallpaperData = useQuery((api as any).reactions.getWallpaper, id ? { chatId: id } : "skip");
+    const [chatWallpaper, setChatWallpaper] = useState<string | null>(null);
     const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (wallpaperData) {
+            setChatWallpaper(wallpaperData);
+        }
+    }, [wallpaperData]);
 
     useEffect(() => {
         if (messagesData) {
@@ -200,6 +210,40 @@ export default function ChatScreen() {
         }
     };
 
+    const handleChatOptions = () => {
+        Alert.alert(
+            "Chat Options",
+            undefined,
+            [
+                { text: "Change Wallpaper", onPress: handleChangeWallpaper },
+                { text: "View Contact", onPress: () => router.push(`/chat-info?id=${id}` as any) },
+                { text: "Search", onPress: () => Alert.alert("Search", "Message search coming soon!") },
+                { text: "Cancel", style: "cancel" },
+            ]
+        );
+    };
+
+    const handleChangeWallpaper = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.3,
+        });
+
+        if (!result.canceled && result.assets[0] && id) {
+            await setWallpaper({ chatId: id as Id<"chats">, wallpaper: result.assets[0].uri });
+            setChatWallpaper(result.assets[0].uri);
+            Alert.alert("Success", "Wallpaper updated!");
+        }
+    };
+
+    const handleClearWallpaper = async () => {
+        if (id) {
+            await setWallpaper({ chatId: id as Id<"chats">, wallpaper: undefined });
+            setChatWallpaper(null);
+            Alert.alert("Success", "Wallpaper cleared!");
+        }
+    };
+
     const handleAddReaction = async (messageId: string, emoji: string) => {
         if (!user) return;
         await addReaction({ messageId: messageId as Id<"messages">, emoji, userId: user.uid });
@@ -213,7 +257,10 @@ export default function ChatScreen() {
     };
 
     const handleMessageOptions = (item: any) => {
-        const options = ["React"];
+        const options = ["React", "Copy", "Forward"];
+        if (item.senderId === user?.uid) {
+            options.push("Delete");
+        }
         
         Alert.alert(
             "Message",
@@ -224,6 +271,13 @@ export default function ChatScreen() {
                     onPress: () => {
                         if (opt === "React") setShowReactionPicker(item._id);
                         if (opt === "Star") handleStarMessage(item._id);
+                        if (opt === "Copy") {
+                            Clipboard.setString(item.text);
+                            Alert.alert("Copied", "Message copied to clipboard.");
+                        }
+                        if (opt === "Forward") {
+                            Alert.alert("Forward", "Forward to another chat coming soon!");
+                        }
                         if (opt === "Delete" && item.senderId === user?.uid) handleDeleteMessage(item._id);
                     }
                 })),
@@ -304,6 +358,11 @@ export default function ChatScreen() {
                             <ChevronLeft size={28} color={Colors.text} />
                         </TouchableOpacity>
                     ),
+                    headerRight: () => (
+                        <TouchableOpacity onPress={handleChatOptions} style={styles.backButton}>
+                            <MoreVertical size={24} color={Colors.text} />
+                        </TouchableOpacity>
+                    ),
                 }} 
             />
             
@@ -311,9 +370,20 @@ export default function ChatScreen() {
                 data={messages}
                 renderItem={renderMessage}
                 keyExtractor={(item) => item._id}
-                style={styles.messageList}
-                contentContainerStyle={styles.messageListContent}
+                style={[styles.messageList, chatWallpaper && { backgroundColor: 'transparent' }]}
+                contentContainerStyle={[
+                    styles.messageListContent,
+                    chatWallpaper && { backgroundColor: 'rgba(0,0,0,0.05)' }
+                ]}
             />
+            
+            {chatWallpaper && (
+                <Image 
+                    source={{ uri: chatWallpaper }} 
+                    style={styles.wallpaperBackground}
+                    blurRadius={0}
+                />
+            )}
             
             {otherUserTyping && (
                 <View style={styles.typingContainer}>
@@ -373,6 +443,13 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
+    },
+    wallpaperBackground: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+        opacity: 0.3,
+        zIndex: -1,
     },
     messageList: {
         flex: 1,
