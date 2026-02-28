@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from 'expo-image-picker';
 import { PlusCircle } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -96,35 +96,49 @@ export default function StatusScreen() {
                 visible={showAddModal}
                 transparent
                 animationType="slide"
-                onRequestClose={() => setShowAddModal(false)}
+                onRequestClose={() => {
+                    Keyboard.dismiss();
+                    setShowAddModal(false);
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Add Status</Text>
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="What's on your mind?"
-                            value={statusText}
-                            onChangeText={setStatusText}
-                            multiline
-                            maxLength={139}
-                        />
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity 
-                                style={styles.cancelButton}
-                                onPress={() => setShowAddModal(false)}
-                            >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={styles.postButton}
-                                onPress={handleAddStatus}
-                            >
-                                <Text style={styles.postButtonText}>Post</Text>
-                            </TouchableOpacity>
-                        </View>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.modalOverlay}>
+                        <KeyboardAvoidingView 
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            style={styles.keyboardView}
+                        >
+                            <View style={styles.modalContent}>
+                                <Text style={styles.modalTitle}>Add Status</Text>
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="What's on your mind?"
+                                    value={statusText}
+                                    onChangeText={setStatusText}
+                                    multiline
+                                    maxLength={139}
+                                    autoFocus
+                                />
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity 
+                                        style={styles.cancelButton}
+                                        onPress={() => {
+                                            Keyboard.dismiss();
+                                            setShowAddModal(false);
+                                        }}
+                                    >
+                                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        style={styles.postButton}
+                                        onPress={handleAddStatus}
+                                    >
+                                        <Text style={styles.postButtonText}>Post</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </KeyboardAvoidingView>
                     </View>
-                </View>
+                </TouchableWithoutFeedback>
             </Modal>
 
             <FlatList
@@ -261,6 +275,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
+    },
+    keyboardView: {
+        width: '100%',
     },
     modalContent: {
         backgroundColor: '#fff',
