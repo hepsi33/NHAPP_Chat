@@ -90,3 +90,56 @@ export const deleteStatus = mutation({
         await ctx.db.delete(args.statusId);
     },
 });
+
+export const markStatusViewed = mutation({
+    args: {
+        statusId: v.id("statusUpdates"),
+        viewerId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        // Check if already viewed
+        const existing = await ctx.db
+            .query("statusViews")
+            .withIndex("by_status_viewer", (q) => 
+                q.eq("statusId", args.statusId).eq("viewerId", args.viewerId)
+            )
+            .first();
+
+        if (!existing) {
+            await ctx.db.insert("statusViews", {
+                statusId: args.statusId,
+                viewerId: args.viewerId,
+                viewedAt: Date.now(),
+            });
+        }
+    },
+});
+
+export const getStatusViewers = mutation({
+    args: { statusId: v.id("statusUpdates") },
+    handler: async (ctx, args) => {
+        const views = await ctx.db
+            .query("statusViews")
+            .withIndex("by_status", (q) => q.eq("statusId", args.statusId))
+            .collect();
+
+        const viewers = [];
+        for (const view of views) {
+            const user = await ctx.db
+                .query("users")
+                .withIndex("by_userId", (q) => q.eq("userId", view.viewerId))
+                .first();
+            
+            if (user) {
+                viewers.push({
+                    userId: user.userId,
+                    name: user.name,
+                    avatar: user.avatar,
+                    viewedAt: view.viewedAt,
+                });
+            }
+        }
+
+        return viewers;
+    },
+});

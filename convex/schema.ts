@@ -52,6 +52,13 @@ export default defineSchema({
   }).index("by_user", ["userId"])
     .index("by_expires", ["expiresAt"]),
 
+  statusViews: defineTable({
+    statusId: v.id("statusUpdates"),
+    viewerId: v.string(),
+    viewedAt: v.number(),
+  }).index("by_status", ["statusId"])
+    .index("by_status_viewer", ["statusId", "viewerId"]),
+
   contacts: defineTable({
     ownerId: v.string(),
     contactEmail: v.string(),

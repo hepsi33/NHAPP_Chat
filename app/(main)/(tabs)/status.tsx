@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from 'expo-image-picker';
 import { PlusCircle } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, ScrollView } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -13,17 +13,21 @@ export default function StatusScreen() {
     const statusesData = useQuery(api.status.listActiveStatuses, { currentUserId: user?.uid || "" });
     const createStatus = useMutation(api.status.createStatus);
     const deleteStatus = useMutation(api.status.deleteStatus);
+    const markViewed = useMutation(api.status.markStatusViewed);
+    const getViewers = useMutation(api.status.getStatusViewers);
+    const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [statusText, setStatusText] = useState('');
     const [selectedStatus, setSelectedStatus] = useState<any>(null);
     const [statusIndex, setStatusIndex] = useState(0);
+    const [viewers, setViewers] = useState<any[]>([]);
+    const [showViewers, setShowViewers] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     const handleAddStatus = async () => {
         if (!user) return;
 
-        // For now, support text status
-        // Image status requires file upload infrastructure
         if (statusText.trim()) {
             try {
                 await createStatus({
@@ -42,14 +46,54 @@ export default function StatusScreen() {
         }
     };
 
-    const handleAddImageStatus = async () => {
+    const handlePickImage = async () => {
         if (!user) return;
         
-        Alert.alert(
-            "Add Image Status",
-            "Image status requires cloud storage. For now, you can only add text status.",
-            [{ text: "OK" }]
-        );
+        setShowAddModal(false);
+        
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images', 'videos'],
+            allowsEditing: true,
+            quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setUploading(true);
+            try {
+                // Get upload URL
+                const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
+                const uploadUrl = await generateUploadUrl({});
+                
+                const uri = result.assets[0].uri;
+                const formData = new FormData();
+                formData.append('file', {
+                    uri,
+                    type: result.assets[0].type || 'image/jpeg',
+                    name: 'status.jpg',
+                } as any);
+                
+                const uploadResult = await fetch(uploadUrl, {
+                    method: "POST",
+                    body: formData,
+                });
+                
+                const resultJson = await uploadResult.json();
+                const storageId = resultJson.storageId || resultJson.id;
+                
+                if (storageId) {
+                    await createStatus({
+                        userId: user.uid,
+                        type: "image",
+                        fileId: storageId,
+                    });
+                    Alert.alert("Success", "Image status posted!");
+                }
+            } catch (error) {
+                Alert.alert("Error", "Failed to upload image.");
+            } finally {
+                setUploading(false);
+            }
+        }
     };
 
     const showAddOptions = () => {
@@ -62,37 +106,70 @@ export default function StatusScreen() {
             "What would you like to share?",
             [
                 { text: "Text Status", onPress: () => setShowAddModal(true) },
-                { text: "Image Status", onPress: handleAddImageStatus },
+                { text: "Image/Video Status", onPress: handlePickImage },
                 { text: "Cancel", style: "cancel" },
             ]
         );
     };
 
+    const handleViewStatus = async (statusItem: any) => {
+        setSelectedStatus(statusItem);
+        setStatusIndex(statusItem.statuses.length - 1);
+        
+        // Mark as viewed
+        if (user && statusItem.user?.userId !== user.uid) {
+            const latestStatus = statusItem.statuses[statusItem.statuses.length - 1];
+            try {
+                await markViewed({
+                    statusId: latestStatus._id,
+                    viewerId: user.uid,
+                });
+            } catch (e) {
+                console.log("Error marking viewed:", e);
+            }
+        }
+        
+        // Get viewers
+        try {
+            const latestStatus = statusItem.statuses[statusItem.statuses.length - 1];
+            const viewerList = await getViewers({ statusId: latestStatus._id });
+            setViewers(viewerList || []);
+        } catch (e) {
+            setViewers([]);
+        }
+    };
+
     const myStatuses = statusesData?.me;
     const otherStatuses = statusesData?.others || [];
 
-    if (statusesData === undefined) {
+    if (statusesData === undefined || uploading) {
         return (
             <View style={styles.container}>
                 <ActivityIndicator size="large" color={Colors.primary} />
+                {uploading && <Text style={styles.uploadingText}>Uploading...</Text>}
             </View>
         );
     }
 
-    const renderStatusItem = ({ item, index }: { item: any, index: number }) => {
+    const renderStatusItem = ({ item }: { item: any }) => {
         const latestStatus = item.statuses?.[item.statuses.length - 1];
         const isTextStatus = latestStatus?.type === 'text';
+        const isImageStatus = latestStatus?.type === 'image';
         
         return (
-            <TouchableOpacity style={styles.statusItem} onPress={() => {
-                setSelectedStatus(item);
-                setStatusIndex(item.statuses.length - 1);
-            }}>
-                <View style={styles.statusRing}>
-                    <Image
-                        source={{ uri: item.user?.avatar || 'https://via.placeholder.com/150' }}
-                        style={styles.statusAvatar}
-                    />
+            <TouchableOpacity style={styles.statusItem} onPress={() => handleViewStatus(item)}>
+                <View style={[styles.statusRing, !isTextStatus && styles.statusRingImage]}>
+                    {isImageStatus ? (
+                        <Image
+                            source={{ uri: latestStatus?.fileId || latestStatus?.text }}
+                            style={styles.statusAvatar}
+                        />
+                    ) : (
+                        <Image
+                            source={{ uri: item.user?.avatar || 'https://via.placeholder.com/150' }}
+                            style={styles.statusAvatar}
+                        />
+                    )}
                 </View>
                 <View style={styles.statusInfo}>
                     <Text style={styles.statusName}>{item.user?.name || 'User'}</Text>
@@ -213,12 +290,18 @@ export default function StatusScreen() {
                 visible={!!selectedStatus}
                 transparent
                 animationType="fade"
-                onRequestClose={() => setSelectedStatus(null)}
+                onRequestClose={() => {
+                    setSelectedStatus(null);
+                    setShowViewers(false);
+                }}
             >
                 <View style={styles.viewStatusContainer}>
                     <TouchableOpacity 
                         style={styles.closeStatusButton}
-                        onPress={() => setSelectedStatus(null)}
+                        onPress={() => {
+                            setSelectedStatus(null);
+                            setShowViewers(false);
+                        }}
                     >
                         <Text style={styles.closeStatusText}>✕</Text>
                     </TouchableOpacity>
@@ -245,7 +328,7 @@ export default function StatusScreen() {
                                     </Text>
                                 ) : (
                                     <Image
-                                        source={{ uri: selectedStatus.statuses[statusIndex].fileId }}
+                                        source={{ uri: selectedStatus.statuses[statusIndex].fileId || selectedStatus.statuses[statusIndex].text }}
                                         style={styles.statusViewImage}
                                         resizeMode="contain"
                                     />
@@ -257,6 +340,37 @@ export default function StatusScreen() {
                                     <Text style={styles.statusViewCount}>
                                         {statusIndex + 1} / {selectedStatus.statuses.length}
                                     </Text>
+                                </View>
+                            )}
+                            
+                            {/* Viewers button */}
+                            <TouchableOpacity 
+                                style={styles.viewersButton}
+                                onPress={() => setShowViewers(!showViewers)}
+                            >
+                                <Text style={styles.viewersText}>
+                                    {viewers.length} view{viewers.length !== 1 ? 's' : ''}
+                                </Text>
+                            </TouchableOpacity>
+                            
+                            {showViewers && (
+                                <View style={styles.viewersList}>
+                                    <Text style={styles.viewersTitle}>Seen by</Text>
+                                    {viewers.length === 0 ? (
+                                        <Text style={styles.noViewers}>No one has seen this yet</Text>
+                                    ) : (
+                                        <ScrollView style={styles.viewersScroll}>
+                                            {viewers.map((viewer: any, idx: number) => (
+                                                <View key={idx} style={styles.viewerItem}>
+                                                    <Image
+                                                        source={{ uri: viewer.avatar || 'https://via.placeholder.com/150' }}
+                                                        style={styles.viewerAvatar}
+                                                    />
+                                                    <Text style={styles.viewerName}>{viewer.name || 'User'}</Text>
+                                                </View>
+                                            ))}
+                                        </ScrollView>
+                                    )}
                                 </View>
                             )}
                         </View>
@@ -271,6 +385,10 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
+    },
+    uploadingText: {
+        marginTop: 10,
+        color: Colors.primary,
     },
     myStatusSection: {
         padding: 15,
@@ -320,6 +438,9 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: Colors.primary,
         padding: 2,
+    },
+    statusRingImage: {
+        borderColor: Colors.accent,
     },
     statusAvatar: {
         width: '100%',
@@ -416,8 +537,6 @@ const styles = StyleSheet.create({
     viewStatusContainer: {
         flex: 1,
         backgroundColor: '#000',
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     closeStatusButton: {
         position: 'absolute',
@@ -432,8 +551,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     statusViewContent: {
-        width: '100%',
-        height: '100%',
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -487,5 +605,57 @@ const styles = StyleSheet.create({
     statusViewCount: {
         fontSize: 16,
         color: '#fff',
+    },
+    viewersButton: {
+        position: 'absolute',
+        bottom: 100,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+    viewersText: {
+        color: '#fff',
+        fontSize: 14,
+    },
+    viewersList: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        maxHeight: 300,
+    },
+    viewersTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: Colors.text,
+        marginBottom: 10,
+    },
+    noViewers: {
+        color: Colors.secondaryText,
+        textAlign: 'center',
+        padding: 20,
+    },
+    viewersScroll: {
+        maxHeight: 200,
+    },
+    viewerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+    },
+    viewerAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 10,
+    },
+    viewerName: {
+        fontSize: 16,
+        color: Colors.text,
     },
 });

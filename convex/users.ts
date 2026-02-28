@@ -92,3 +92,58 @@ export const updateProfile = mutation({
         await ctx.db.patch(user._id, updates);
     },
 });
+
+// Delete user account
+export const deleteAccount = mutation({
+    args: { userId: v.string() },
+    handler: async (ctx, args) => {
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+            .first();
+
+        if (!user) throw new Error("User not found");
+
+        // Delete all user's chats
+        const chats = await ctx.db.query("chats").collect();
+        for (const chat of chats) {
+            if (chat.participants?.includes(args.userId)) {
+                // Delete all messages in this chat
+                const messages = await ctx.db.query("messages").collect();
+                for (const msg of messages) {
+                    if (msg.chatId === chat._id) {
+                        await ctx.db.delete(msg._id);
+                    }
+                }
+                await ctx.db.delete(chat._id);
+            }
+        }
+
+        // Delete all user's messages
+        const allMessages = await ctx.db.query("messages").collect();
+        for (const msg of allMessages) {
+            if (msg.senderId === args.userId) {
+                await ctx.db.delete(msg._id);
+            }
+        }
+
+        // Delete all user's status updates
+        const statuses = await ctx.db.query("statusUpdates").collect();
+        for (const status of statuses) {
+            if (status.userId === args.userId) {
+                await ctx.db.delete(status._id);
+            }
+        }
+
+        // Delete all user's contacts
+        const contacts = await ctx.db.query("contacts").collect();
+        for (const contact of contacts) {
+            if (contact.ownerId === args.userId) {
+                await ctx.db.delete(contact._id);
+            }
+        }
+
+        // Delete the user
+        await ctx.db.delete(user._id);
+    },
+});

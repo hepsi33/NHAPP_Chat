@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from 'expo-router';
-import { Bell, HelpCircle, Key, LogOut, Shield, User } from 'lucide-react-native';
+import { Bell, HelpCircle, Key, LogOut, Shield, User, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../../constants/Colors';
@@ -13,6 +13,7 @@ export default function SettingsScreen() {
     const logout = useAuthStore((state) => state.logout);
 
     const userProfile = useQuery(api.users.getUserById, { userId: user?.uid || "" });
+    const deleteUserAccount = useMutation(api.users.deleteAccount);
 
     const handleLogout = () => {
         Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -26,6 +27,29 @@ export default function SettingsScreen() {
                 },
             },
         ]);
+    };
+
+    const handleDeleteAccount = () => {
+        Alert.alert(
+            'Delete Account',
+            'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteUserAccount({ userId: user?.uid || "" });
+                            logout();
+                            router.replace('/(auth)/login');
+                        } catch (err) {
+                            Alert.alert('Error', 'Failed to delete account. Please try again.');
+                        }
+                    },
+                },
+            ]
+        );
     };
 
     return (
@@ -78,6 +102,11 @@ export default function SettingsScreen() {
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <LogOut size={24} color="#ff4444" />
                     <Text style={styles.logoutText}>Logout</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+                    <Trash2 size={24} color="#ff0000" />
+                    <Text style={styles.deleteText}>Delete Account</Text>
                 </TouchableOpacity>
             </ScrollView>
         </View>
@@ -151,6 +180,21 @@ const styles = StyleSheet.create({
     logoutText: {
         fontSize: 16,
         color: '#ff4444',
+        marginLeft: 10,
+    },
+    deleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 15,
+        marginTop: 15,
+        marginHorizontal: 20,
+        backgroundColor: '#ffebee',
+        borderRadius: 10,
+    },
+    deleteText: {
+        fontSize: 16,
+        color: '#ff0000',
         marginLeft: 10,
     },
 });

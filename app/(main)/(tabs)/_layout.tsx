@@ -28,16 +28,6 @@ export default function TabLayout() {
                     fontSize: 22,
                     fontWeight: 'bold',
                 },
-                headerRight: () => (
-                    <View style={{ flexDirection: 'row', marginRight: 15, alignItems: 'center', gap: 20 }}>
-                        <TouchableOpacity>
-                            <Search color={Colors.text} size={22} />
-                        </TouchableOpacity>
-                        <TouchableOpacity>
-                            <MoreVertical color={Colors.text} size={22} />
-                        </TouchableOpacity>
-                    </View>
-                ),
             }}
         >
             <Tabs.Screen
