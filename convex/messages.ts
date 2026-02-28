@@ -21,10 +21,17 @@ export const sendMessage = mutation({
             createdAt: Date.now(),
         });
 
-        // Update chat timestamp
+        // Update chat timestamp and last message
         const chat = await ctx.db.get(args.chatId);
         if (chat) {
-            await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
+            const now = Date.now();
+            const currentUnreadCount = chat.unreadCount || 0;
+            await ctx.db.patch(args.chatId, { 
+                updatedAt: now,
+                lastMessage: args.text,
+                lastMessageTime: now,
+                unreadCount: currentUnreadCount + 1,
+            });
         }
 
         return id;
@@ -58,5 +65,8 @@ export const markRead = mutation({
                 await ctx.db.patch(msg._id, { status: "read" });
             }
         }
+
+        // Reset unread count
+        await ctx.db.patch(args.chatId, { unreadCount: 0 });
     },
 });

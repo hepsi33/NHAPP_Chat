@@ -35,11 +35,75 @@ export const createPrivateChat = mutation({
             name: otherUser?.name || "Chat",
             avatar: otherAvatar || undefined,
             participants: args.participants,
+            unreadCount: 0,
+            isMuted: false,
+            isArchived: false,
             createdAt: now,
             updatedAt: now,
         });
 
         return chatId;
+    },
+});
+
+// Create a group chat
+export const createGroupChat = mutation({
+    args: {
+        name: v.string(),
+        participants: v.array(v.string()),
+        currentUserId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        
+        // Get current user details for avatar
+        const currentUser = await ctx.db.query("users").withIndex("by_userId", q => q.eq("userId", args.currentUserId)).first();
+
+        const chatId = await ctx.db.insert("chats", {
+            type: "group",
+            name: args.name,
+            avatar: undefined, // Groups can have group avatar later
+            participants: args.participants,
+            unreadCount: 0,
+            isMuted: false,
+            isArchived: false,
+            createdAt: now,
+            updatedAt: now,
+        });
+
+        return chatId;
+    },
+});
+
+// Mute a chat
+export const muteChat = mutation({
+    args: { chatId: v.id("chats") },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.chatId, { isMuted: true });
+    },
+});
+
+// Unmute a chat
+export const unmuteChat = mutation({
+    args: { chatId: v.id("chats") },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.chatId, { isMuted: false });
+    },
+});
+
+// Archive a chat
+export const archiveChat = mutation({
+    args: { chatId: v.id("chats") },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.chatId, { isArchived: true });
+    },
+});
+
+// Unarchive a chat
+export const unarchiveChat = mutation({
+    args: { chatId: v.id("chats") },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.chatId, { isArchived: false });
     },
 });
 

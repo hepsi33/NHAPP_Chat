@@ -55,8 +55,8 @@ export default function ChatScreen() {
         const isMe = item.senderId === user?.uid;
         return (
             <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
-                <Text style={styles.messageText}>{item.text}</Text>
-                <Text style={styles.messageTime}>
+                <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>{item.text}</Text>
+                <Text style={[styles.messageTime, isMe ? styles.myMessageTime : styles.theirMessageTime]}>
                     {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
             </View>
@@ -136,13 +136,23 @@ const styles = StyleSheet.create({
     },
     messageText: {
         fontSize: 16,
+    },
+    myMessageText: {
+        color: '#FFF',
+    },
+    theirMessageText: {
         color: '#000',
     },
     messageTime: {
         fontSize: 10,
-        color: '#666',
         alignSelf: 'flex-end',
         marginTop: 4,
+    },
+    myMessageTime: {
+        color: '#DDD',
+    },
+    theirMessageTime: {
+        color: '#666',
     },
     inputContainer: {
         flexDirection: 'row',

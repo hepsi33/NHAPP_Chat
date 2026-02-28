@@ -38,7 +38,7 @@ export default function CreateGroupScreen() {
     // Convex Hooks
     const users = useQuery(api.users.searchUsers, { email: "" }) || [];
     const filteredUsers = users.filter((u: any) => u.userId !== currentUser?.uid);
-    const createChat = useMutation(api.chats.createPrivateChat);
+    const createGroupChat = useMutation(api.chats.createGroupChat);
 
     const toggleUser = (userId: string) => {
         if (selectedUsers.includes(userId)) {
@@ -58,7 +58,8 @@ export default function CreateGroupScreen() {
 
         setLoading(true);
         try {
-            const chatId = await createChat({
+            const chatId = await createGroupChat({
+                name: groupName,
                 participants: [currentUser.uid, ...selectedUsers],
                 currentUserId: currentUser.uid,
             });

@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { Lock, MessageSquare, Users } from 'lucide-react-native';
@@ -7,26 +7,70 @@ import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput,
 import { Swipeable } from 'react-native-gesture-handler';
 import { Colors } from '../../../constants/Colors';
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useContactsSync } from '../../../hooks/useContactsSync';
 
 const ChatListItem = React.memo(({ item }: { item: any }) => {
     const router = useRouter();
+    const muteChat = useMutation(api.chats.muteChat);
+    const archiveChat = useMutation(api.chats.archiveChat);
 
     ChatListItem.displayName = 'ChatListItem';
+
+    const formatTime = (timestamp: number) => {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays === 1) {
+            return 'Yesterday';
+        } else if (diffDays < 7) {
+            return format(date, 'EEEE');
+        } else {
+            return format(date, 'MMM d');
+        }
+    };
+
+    const handleMute = async () => {
+        try {
+            await muteChat({ chatId: item._id as Id<"chats"> });
+        } catch (e) {
+            console.log('Error muting chat:', e);
+        }
+    };
+
+    const handleArchive = async () => {
+        try {
+            await archiveChat({ chatId: item._id as Id<"chats"> });
+        } catch (e) {
+            console.log('Error archiving chat:', e);
+        }
+    };
 
     const renderRightActions = () => {
         return (
             <View style={{ flexDirection: 'row', width: 140 }}>
-                <TouchableOpacity style={{ flex: 1, backgroundColor: '#A0A0A0', justifyContent: 'center', alignItems: 'center' }}>
+                <TouchableOpacity 
+                    style={{ flex: 1, backgroundColor: '#A0A0A0', justifyContent: 'center', alignItems: 'center' }}
+                    onPress={handleMute}
+                >
                     <Text style={{ color: 'white', fontWeight: 'bold' }}>Mute</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={{ flex: 1, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' }}>
+                <TouchableOpacity 
+                    style={{ flex: 1, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' }}
+                    onPress={handleArchive}
+                >
                     <Text style={{ color: 'white', fontWeight: 'bold' }}>Archive</Text>
                 </TouchableOpacity>
             </View>
         );
     };
+
+    const hasUnread = item.unreadCount > 0;
 
     return (
         <Swipeable renderRightActions={renderRightActions}>
@@ -36,11 +80,26 @@ const ChatListItem = React.memo(({ item }: { item: any }) => {
             >
                 <Image
                     source={{ uri: typeof item.avatar === 'string' && item.avatar.length > 0 ? item.avatar : 'https://via.placeholder.com/150' }}
-                    style={styles.avatar}
+                    style={[styles.avatar, hasUnread && styles.avatarUnread]}
                 />
                 <View style={styles.chatInfo}>
                     <View style={styles.chatRow}>
-                        <Text style={styles.name}>{item.name || "Chat"}</Text>
+                        <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
+                            {item.type === 'group' ? '👥 ' : ''}{item.name || "Chat"}
+                        </Text>
+                        <Text style={[styles.time, hasUnread && styles.timeUnread]}>
+                            {formatTime(item.lastMessageTime || item.updatedAt)}
+                        </Text>
+                    </View>
+                    <View style={styles.chatRow}>
+                        <Text style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]} numberOfLines={1}>
+                            {item.lastMessage || 'No messages yet'}
+                        </Text>
+                        {hasUnread && (
+                            <View style={styles.unreadBadge}>
+                                <Text style={styles.unreadCount}>{item.unreadCount}</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             </TouchableOpacity>
@@ -213,10 +272,41 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: Colors.secondaryText,
     },
+    timeUnread: {
+        fontSize: 12,
+        color: Colors.primary,
+        fontWeight: '600',
+    },
     lastMessage: {
         fontSize: 14,
         color: Colors.secondaryText,
         flex: 1,
+    },
+    lastMessageUnread: {
+        fontSize: 14,
+        color: Colors.text,
+        fontWeight: '500',
+        flex: 1,
+    },
+    unreadBadge: {
+        backgroundColor: Colors.primary,
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+    },
+    unreadCount: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    avatarUnread: {
+        borderColor: Colors.primary,
+    },
+    nameUnread: {
+        fontWeight: '800',
     },
     emptyContainer: {
         flex: 1,
