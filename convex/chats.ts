@@ -5,6 +5,7 @@ import { mutation, query } from "./_generated/server";
 export const createPrivateChat = mutation({
     args: {
         participants: v.array(v.string()),
+        currentUserId: v.string(),
     },
     handler: async (ctx, args) => {
         // Check if private chat already exists between these users
@@ -24,10 +25,15 @@ export const createPrivateChat = mutation({
         const user1 = await ctx.db.query("users").withIndex("by_userId", q => q.eq("userId", args.participants[0])).first();
         const user2 = await ctx.db.query("users").withIndex("by_userId", q => q.eq("userId", args.participants[1])).first();
 
+        // Determine which user is the "other" (not the current user)
+        const otherUser = args.currentUserId === args.participants[0] ? user2 : user1;
+        const otherAvatar = args.currentUserId === args.participants[0] ? user2?.avatar : user1?.avatar;
+
         const now = Date.now();
         const chatId = await ctx.db.insert("chats", {
             type: "private",
-            name: user2?.name || "Chat",
+            name: otherUser?.name || "Chat",
+            avatar: otherAvatar || undefined,
             participants: args.participants,
             createdAt: now,
             updatedAt: now,

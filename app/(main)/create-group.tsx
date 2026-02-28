@@ -60,6 +60,7 @@ export default function CreateGroupScreen() {
         try {
             const chatId = await createChat({
                 participants: [currentUser.uid, ...selectedUsers],
+                currentUserId: currentUser.uid,
             });
 
             router.replace(`/(main)/chat/${chatId}`);

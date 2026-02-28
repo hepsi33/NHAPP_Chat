@@ -1,8 +1,8 @@
 import { useMutation, useQuery } from "convex/react";
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Send as SendIcon } from 'lucide-react-native';
+import { Send as SendIcon, ChevronLeft } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -67,10 +67,18 @@ export default function ChatScreen() {
         <View style={styles.container}>
             <Stack.Screen 
                 options={{ 
-                    headerTitle: chat?.name || 'Chat',
+                    headerTitle: () => (
+                        <View style={styles.headerTitleContainer}>
+                            <Image 
+                                source={{ uri: chat?.avatar || 'https://via.placeholder.com/150' }} 
+                                style={styles.headerAvatar}
+                            />
+                            <Text style={styles.headerTitleText}>{chat?.name || 'Chat'}</Text>
+                        </View>
+                    ),
                     headerLeft: () => (
-                        <TouchableOpacity onPress={() => router.back()} style={{ paddingLeft: 10 }}>
-                            <Text style={{ fontSize: 18 }}>← Back</Text>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            <ChevronLeft size={28} color={Colors.text} />
                         </TouchableOpacity>
                     ),
                 }} 
@@ -155,5 +163,23 @@ const styles = StyleSheet.create({
     },
     sendButton: {
         padding: 8,
+    },
+    headerTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerAvatar: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        marginRight: 10,
+    },
+    headerTitleText: {
+        fontSize: 17,
+        fontWeight: '600',
+        color: Colors.text,
+    },
+    backButton: {
+        padding: 4,
     },
 });

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Key, Lock, Mail } from 'lucide-react-native';
+import { ArrowLeft, Key, Lock, Mail, User } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
@@ -8,6 +8,7 @@ export default function AccountSettingsScreen() {
     const router = useRouter();
 
     const accountOptions = [
+        { id: 'profile', title: 'Profile', subtitle: 'Change your name and profile picture', icon: User, path: '/(main)/profile-edit' },
         { id: 'privacy', title: 'Privacy', subtitle: 'Block contacts, disappearing messages', icon: Lock, path: '/(main)/privacy' },
         { id: 'security', title: 'Security', subtitle: 'Security notifications, show security code', icon: Key, path: '/(main)/security' },
         { id: 'email', title: 'Email Address', subtitle: 'Manage your connected email', icon: Mail, path: '/(main)/email' },

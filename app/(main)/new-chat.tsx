@@ -154,6 +154,7 @@ Get started today: https://nhapp.com/download`;
         try {
             const chatId = await createChat({
                 participants: [currentUser.uid, targetUser.userId],
+                currentUserId: currentUser.uid,
             });
             router.push(`/(main)/chat/${chatId}`);
         } catch {

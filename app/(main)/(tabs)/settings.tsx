@@ -33,10 +33,10 @@ export default function SettingsScreen() {
             <ScrollView>
                 <View style={styles.profileSection}>
                     <Image
-                        source={{ uri: user?.photoURL || 'https://via.placeholder.com/150' }}
+                        source={{ uri: user?.photoURL || userProfile?.avatar || 'https://via.placeholder.com/150' }}
                         style={styles.avatar}
                     />
-                    <Text style={styles.name}>{user?.displayName || 'User'}</Text>
+                    <Text style={styles.name}>{userProfile?.name || user?.displayName || 'User'}</Text>
                     <Text style={styles.email}>{user?.email}</Text>
                     <Text style={styles.status}>{userProfile?.status || 'Hey there!'}</Text>
                 </View>
