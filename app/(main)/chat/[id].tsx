@@ -21,6 +21,7 @@ export default function ChatScreen() {
 
     const chat = useQuery(api.chats.getChat, {
         chatId: id as Id<"chats">,
+        currentUserId: user?.uid,
     });
 
     const messagesData = useQuery(api.messages.getMessages, {

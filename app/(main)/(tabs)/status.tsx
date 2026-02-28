@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from 'expo-image-picker';
 import { PlusCircle } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../../constants/Colors';
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -12,18 +12,54 @@ export default function StatusScreen() {
 
     const statusesData = useQuery(api.status.listActiveStatuses, { currentUserId: user?.uid || "" });
     const createStatus = useMutation(api.status.createStatus);
+    const deleteStatus = useMutation(api.status.deleteStatus);
+
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [statusText, setStatusText] = useState('');
 
     const handleAddStatus = async () => {
         if (!user) return;
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            quality: 0.8,
-        });
 
-        if (!result.canceled && result.assets[0].uri) {
-            Alert.alert('Coming Soon', 'Status uploads will be available soon.');
+        // For now, support text status
+        // Image status requires file upload infrastructure
+        if (statusText.trim()) {
+            try {
+                await createStatus({
+                    userId: user.uid,
+                    type: "text",
+                    text: statusText.trim(),
+                });
+                setStatusText('');
+                setShowAddModal(false);
+                Alert.alert("Success", "Status posted!");
+            } catch (error) {
+                Alert.alert("Error", "Failed to post status.");
+            }
+        } else {
+            Alert.alert("Enter Status", "Please enter some text for your status.");
         }
+    };
+
+    const handleAddImageStatus = async () => {
+        if (!user) return;
+        
+        Alert.alert(
+            "Add Image Status",
+            "Image status requires cloud storage. For now, you can only add text status.",
+            [{ text: "OK" }]
+        );
+    };
+
+    const showAddOptions = () => {
+        Alert.alert(
+            "Add Status",
+            "What would you like to share?",
+            [
+                { text: "Text Status", onPress: () => setShowAddModal(true) },
+                { text: "Image Status", onPress: handleAddImageStatus },
+                { text: "Cancel", style: "cancel" },
+            ]
+        );
     };
 
     const myStatuses = statusesData?.me;
@@ -38,7 +74,7 @@ export default function StatusScreen() {
     }
 
     const renderStatusItem = ({ item }: { item: any }) => (
-        <View style={styles.statusItem}>
+        <TouchableOpacity style={styles.statusItem}>
             <View style={styles.statusRing}>
                 <Image
                     source={{ uri: item.user?.avatar || 'https://via.placeholder.com/150' }}
@@ -48,21 +84,56 @@ export default function StatusScreen() {
             <View style={styles.statusInfo}>
                 <Text style={styles.statusName}>{item.user?.name || 'User'}</Text>
                 <Text style={styles.statusTime}>
-                    {item.statuses?.length || 0} status updates
+                    {item.statuses?.length || 0} status updates • {item.statuses?.[item.statuses.length - 1] ? new Date(item.statuses[item.statuses.length - 1].createdAt).toLocaleTimeString() : ''}
                 </Text>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
         <View style={styles.container}>
+            <Modal
+                visible={showAddModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowAddModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Add Status</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="What's on your mind?"
+                            value={statusText}
+                            onChangeText={setStatusText}
+                            multiline
+                            maxLength={139}
+                        />
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity 
+                                style={styles.cancelButton}
+                                onPress={() => setShowAddModal(false)}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={styles.postButton}
+                                onPress={handleAddStatus}
+                            >
+                                <Text style={styles.postButtonText}>Post</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             <FlatList
                 data={otherStatuses}
                 renderItem={renderStatusItem}
                 keyExtractor={(item, index) => item.user?.userId || index.toString()}
                 ListHeaderComponent={
                     <View style={styles.myStatusSection}>
-                        <TouchableOpacity style={styles.myStatusItem} onPress={handleAddStatus}>
+                        <TouchableOpacity style={styles.myStatusItem} onPress={showAddOptions}>
                             <View style={styles.myStatusContainer}>
                                 <Image
                                     source={{ uri: user?.photoURL || 'https://via.placeholder.com/150' }}
@@ -77,7 +148,7 @@ export default function StatusScreen() {
                                 <Text style={styles.myStatusTap}>Tap to add status</Text>
                             </View>
                         </TouchableOpacity>
-                        {myStatuses && (
+                        {myStatuses && myStatuses.statuses && myStatuses.statuses.length > 0 && (
                             <View style={styles.myStatusItem}>
                                 <View style={styles.statusRing}>
                                     <Image
@@ -88,7 +159,7 @@ export default function StatusScreen() {
                                 <View style={styles.statusInfo}>
                                     <Text style={styles.statusName}>My Status</Text>
                                     <Text style={styles.statusTime}>
-                                        {myStatuses.statuses?.length || 0} updates
+                                        {myStatuses.statuses.length} update{myStatuses.statuses.length !== 1 ? 's' : ''}
                                     </Text>
                                 </View>
                             </View>
@@ -185,5 +256,62 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: Colors.secondaryText,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        paddingBottom: 40,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: Colors.text,
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    modalInput: {
+        backgroundColor: '#f5f5f5',
+        borderRadius: 12,
+        padding: 15,
+        fontSize: 16,
+        minHeight: 100,
+        textAlignVertical: 'top',
+        marginBottom: 15,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    cancelButton: {
+        flex: 1,
+        padding: 15,
+        marginRight: 10,
+        borderRadius: 10,
+        backgroundColor: '#f0f0f0',
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        color: Colors.text,
+    },
+    postButton: {
+        flex: 1,
+        padding: 15,
+        marginLeft: 10,
+        borderRadius: 10,
+        backgroundColor: Colors.primary,
+        alignItems: 'center',
+    },
+    postButtonText: {
+        fontSize: 16,
+        color: '#fff',
+        fontWeight: '600',
     },
 });

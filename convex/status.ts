@@ -6,6 +6,7 @@ export const createStatus = mutation({
         userId: v.string(),
         type: v.union(v.literal("image"), v.literal("text")),
         fileId: v.optional(v.string()),
+        text: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const now = Date.now();
@@ -15,6 +16,7 @@ export const createStatus = mutation({
             userId: args.userId,
             type: args.type,
             fileId: args.fileId,
+            text: args.text,
             createdAt: now,
             expiresAt: expiresAt,
         });
@@ -59,6 +61,7 @@ export const listActiveStatuses = query({
                         _id: s._id,
                         type: s.type,
                         fileId: s.fileId,
+                        text: s.text,
                         createdAt: s.createdAt,
                     })),
                 });

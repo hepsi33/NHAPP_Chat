@@ -107,21 +107,67 @@ export const unarchiveChat = mutation({
     },
 });
 
-// Get chat by ID
+// Get chat by ID - now accepts currentUserId to compute other participant's info
 export const getChat = query({
-    args: { chatId: v.id("chats") },
+    args: { chatId: v.id("chats"), currentUserId: v.optional(v.string()) },
     handler: async (ctx, args) => {
-        return await ctx.db.get(args.chatId);
+        const chat = await ctx.db.get(args.chatId);
+        if (!chat) return null;
+
+        // For private chats, dynamically compute the other participant's info
+        if (chat.type === "private" && chat.participants && args.currentUserId) {
+            const otherParticipantId = chat.participants.find(p => p !== args.currentUserId);
+            if (otherParticipantId) {
+                const otherUser = await ctx.db
+                    .query("users")
+                    .withIndex("by_userId", q => q.eq("userId", otherParticipantId))
+                    .first();
+                
+                if (otherUser) {
+                    // Return a new object with the correct name and avatar
+                    return {
+                        ...chat,
+                        name: otherUser.name || chat.name,
+                        avatar: otherUser.avatar || chat.avatar,
+                    };
+                }
+            }
+        }
+
+        return chat;
     },
 });
 
-// Get all chats for a user
+// Get all chats for a user - now computes correct participant info
 export const getUserChats = query({
     args: { userId: v.string() },
     handler: async (ctx, args) => {
         const allChats = await ctx.db.query("chats").collect();
         const userChats = allChats.filter(c => c.participants && c.participants.includes(args.userId));
-        return userChats.sort((a, b) => b.updatedAt - a.updatedAt);
+        
+        // For each private chat, compute the correct other participant's info
+        const enhancedChats = await Promise.all(userChats.map(async (chat) => {
+            if (chat.type === "private" && chat.participants) {
+                const otherParticipantId = chat.participants.find(p => p !== args.userId);
+                if (otherParticipantId) {
+                    const otherUser = await ctx.db
+                        .query("users")
+                        .withIndex("by_userId", q => q.eq("userId", otherParticipantId))
+                        .first();
+                    
+                    if (otherUser) {
+                        return {
+                            ...chat,
+                            name: otherUser.name || chat.name,
+                            avatar: otherUser.avatar || chat.avatar,
+                        };
+                    }
+                }
+            }
+            return chat;
+        }));
+        
+        return enhancedChats.sort((a, b) => b.updatedAt - a.updatedAt);
     },
 });
 

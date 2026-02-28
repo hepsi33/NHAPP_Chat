@@ -46,6 +46,7 @@ export default defineSchema({
     userId: v.string(),
     type: v.union(v.literal("image"), v.literal("text")),
     fileId: v.optional(v.string()),
+    text: v.optional(v.string()),
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_user", ["userId"])
