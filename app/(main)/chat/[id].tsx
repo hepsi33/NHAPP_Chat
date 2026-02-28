@@ -375,8 +375,16 @@ export default function ChatScreen() {
         const isMe = item.senderId === user?.uid;
         const isImage = item.type === 'image';
         
-        // For images stored in Convex, we'll try to get the URL
-        const imageUri = isImage ? (item.text.startsWith('http') ? item.text : `https://doting-gull-823.convex.cloud/api/storage/get/${item.text}`) : null;
+        // For images - try to construct the full URL
+        let imageUri = null;
+        if (isImage && item.text) {
+            const text = item.text;
+            if (text.startsWith('http')) {
+                imageUri = text;
+            } else {
+                imageUri = `https://doting-gull-823.convex.cloud/api/storage/get/${text}`;
+            }
+        }
         
         return (
             <TouchableOpacity 
@@ -385,12 +393,16 @@ export default function ChatScreen() {
                 onLongPress={() => handleMessageOptions(item)}
             >
                 <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
-                    {isImage ? (
+                    {isImage && imageUri ? (
                         <Image 
-                            source={{ uri: imageUri || item.text }}
+                            source={{ uri: imageUri }}
                             style={styles.messageImage}
                             resizeMode="cover"
                         />
+                    ) : isImage ? (
+                        <View style={[styles.messageImage, styles.imageError]}>
+                            <Text style={styles.imageErrorText}>📷</Text>
+                        </View>
                     ) : (
                         <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>{item.text}</Text>
                     )}
@@ -567,6 +579,18 @@ const styles = StyleSheet.create({
         height: 200,
         borderRadius: 12,
         marginBottom: 4,
+    },
+    imageError: {
+        width: 200,
+        height: 200,
+        borderRadius: 12,
+        marginBottom: 4,
+        backgroundColor: '#ddd',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imageErrorText: {
+        fontSize: 40,
     },
     messageFooter: {
         flexDirection: 'row',
