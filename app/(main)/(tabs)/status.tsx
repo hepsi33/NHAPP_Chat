@@ -147,23 +147,24 @@ export default function StatusScreen() {
                 keyExtractor={(item, index) => item.user?.userId || index.toString()}
                 ListHeaderComponent={
                     <View style={styles.myStatusSection}>
-                        <TouchableOpacity style={styles.myStatusItem} onPress={showAddOptions}>
-                            <View style={styles.myStatusContainer}>
-                                <Image
-                                    source={{ uri: user?.photoURL || 'https://via.placeholder.com/150' }}
-                                    style={styles.myStatusAvatar}
-                                />
-                                <View style={styles.addStatusButton}>
-                                    <PlusCircle size={20} color={Colors.primary} />
+                        {!myStatuses || !myStatuses.statuses || myStatuses.statuses.length === 0 ? (
+                            <TouchableOpacity style={styles.myStatusItem} onPress={showAddOptions}>
+                                <View style={styles.myStatusContainer}>
+                                    <Image
+                                        source={{ uri: user?.photoURL || 'https://via.placeholder.com/150' }}
+                                        style={styles.myStatusAvatar}
+                                    />
+                                    <View style={styles.addStatusButton}>
+                                        <PlusCircle size={20} color={Colors.primary} />
+                                    </View>
                                 </View>
-                            </View>
-                            <View style={styles.myStatusInfo}>
-                                <Text style={styles.myStatusLabel}>My Status</Text>
-                                <Text style={styles.myStatusTap}>Tap to add status</Text>
-                            </View>
-                        </TouchableOpacity>
-                        {myStatuses && myStatuses.statuses && myStatuses.statuses.length > 0 && (
-                            <View style={styles.myStatusItem}>
+                                <View style={styles.myStatusInfo}>
+                                    <Text style={styles.myStatusLabel}>My Status</Text>
+                                    <Text style={styles.myStatusTap}>Tap to add status</Text>
+                                </View>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity style={styles.myStatusItem} onPress={showAddOptions}>
                                 <View style={styles.statusRing}>
                                     <Image
                                         source={{ uri: user?.photoURL || 'https://via.placeholder.com/150' }}
@@ -176,7 +177,7 @@ export default function StatusScreen() {
                                         {myStatuses.statuses.length} update{myStatuses.statuses.length !== 1 ? 's' : ''}
                                     </Text>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         )}
                     </View>
                 }
