@@ -56,4 +56,11 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_owner", ["ownerId"])
     .index("by_owner_email", ["ownerId", "contactEmail"]),
+
+  typingStatus: defineTable({
+    chatId: v.id("chats"),
+    userId: v.string(),
+    isTyping: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_chat", ["chatId"]),
 });
