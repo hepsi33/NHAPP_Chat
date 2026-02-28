@@ -25,8 +25,13 @@
       "permissions": [
         "RECORD_AUDIO",
         "READ_CONTACTS",
-        "WRITE_CONTACTS"
-      ]
+        "WRITE_CONTACTS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ],
+      "package": "com.coollad49.NHAPP2"
     },
     "web": {
       "output": "static",
@@ -62,6 +67,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4b54933f-019f-4433-835a-ebd1030c9dd1"
+      }
     }
   }
 }
