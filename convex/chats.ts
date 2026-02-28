@@ -124,3 +124,33 @@ export const getUserChats = query({
         return userChats.sort((a, b) => b.updatedAt - a.updatedAt);
     },
 });
+
+// Add participant to group
+export const addParticipant = mutation({
+    args: { 
+        chatId: v.id("chats"),
+        userId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const chat = await ctx.db.get(args.chatId);
+        if (chat && chat.participants) {
+            const participants = [...chat.participants, args.userId];
+            await ctx.db.patch(args.chatId, { participants });
+        }
+    },
+});
+
+// Remove participant from group
+export const removeParticipant = mutation({
+    args: { 
+        chatId: v.id("chats"),
+        userId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const chat = await ctx.db.get(args.chatId);
+        if (chat && chat.participants) {
+            const participants = chat.participants.filter(p => p !== args.userId);
+            await ctx.db.patch(args.chatId, { participants });
+        }
+    },
+});

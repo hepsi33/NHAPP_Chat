@@ -19,6 +19,7 @@ export default defineSchema({
     name: v.optional(v.string()),
     avatar: v.optional(v.string()),
     participants: v.optional(v.array(v.string())),
+    adminIds: v.optional(v.array(v.string())),
     lastMessage: v.optional(v.string()),
     lastMessageTime: v.optional(v.number()),
     unreadCount: v.optional(v.number()),

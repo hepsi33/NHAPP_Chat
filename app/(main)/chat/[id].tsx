@@ -1,8 +1,8 @@
 import { useMutation, useQuery } from "convex/react";
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Send as SendIcon, ChevronLeft, Plus, Image as ImageIcon, Camera } from 'lucide-react-native';
+import { Send as SendIcon, ChevronLeft, Plus, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../../constants/Colors';
 import { api } from "../../../convex/_generated/api";
@@ -16,6 +16,7 @@ export default function ChatScreen() {
     const [messages, setMessages] = useState<any[]>([]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const chat = useQuery(api.chats.getChat, {
@@ -33,6 +34,7 @@ export default function ChatScreen() {
     const sendMessage = useMutation(api.messages.sendMessage);
     const markRead = useMutation(api.messages.markRead);
     const setTyping = useMutation((api as any).typing.setTyping);
+    const deleteMessage = useMutation((api as any).messages.deleteMessage);
 
     useEffect(() => {
         if (messagesData) {
@@ -169,25 +171,64 @@ export default function ChatScreen() {
         return `last seen ${date.toLocaleDateString()}`;
     };
 
+    const handleDeleteMessage = async (messageId: string) => {
+        Alert.alert(
+            "Delete Message",
+            "Are you sure you want to delete this message?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: 'destructive',
+                    onPress: async () => {
+                        await deleteMessage({ messageId: messageId as Id<"messages"> });
+                    }
+                },
+            ]
+        );
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'sent': return '✓';
+            case 'delivered': return '✓✓';
+            case 'read': return '✓✓';
+            default: return '';
+        }
+    };
+
     const renderMessage = ({ item }: { item: any }) => {
         const isMe = item.senderId === user?.uid;
         const isImage = item.type === 'image';
         
         return (
-            <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
-                {isImage ? (
-                    <Image 
-                        source={{ uri: item.text }} 
-                        style={styles.messageImage}
-                        resizeMode="cover"
-                    />
-                ) : (
-                    <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>{item.text}</Text>
-                )}
-                <Text style={[styles.messageTime, isMe ? styles.myMessageTime : styles.theirMessageTime]}>
-                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-            </View>
+            <TouchableOpacity 
+                onPress={() => isImage && setSelectedImage(item.text)}
+                disabled={!isImage}
+                onLongPress={() => isMe && handleDeleteMessage(item._id)}
+            >
+                <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
+                    {isImage ? (
+                        <Image 
+                            source={{ uri: item.text }} 
+                            style={styles.messageImage}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>{item.text}</Text>
+                    )}
+                    <View style={styles.messageFooter}>
+                        <Text style={[styles.messageTime, isMe ? styles.myMessageTime : styles.theirMessageTime]}>
+                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        {isMe && (
+                            <Text style={[styles.messageStatus, item.status === 'read' && styles.messageStatusRead]}>
+                                {getStatusIcon(item.status)}
+                            </Text>
+                        )}
+                    </View>
+                </View>
+            </TouchableOpacity>
         );
     };
 
@@ -259,6 +300,29 @@ export default function ChatScreen() {
                     <SendIcon size={24} color={Colors.primary} />
                 </TouchableOpacity>
             </View>
+
+            <Modal
+                visible={!!selectedImage}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setSelectedImage(null)}
+            >
+                <View style={styles.imageViewerContainer}>
+                    <TouchableOpacity 
+                        style={styles.closeButton}
+                        onPress={() => setSelectedImage(null)}
+                    >
+                        <X size={28} color="#FFF" />
+                    </TouchableOpacity>
+                    {selectedImage && (
+                        <Image 
+                            source={{ uri: selectedImage }} 
+                            style={styles.fullImage}
+                            resizeMode="contain"
+                        />
+                    )}
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -296,6 +360,19 @@ const styles = StyleSheet.create({
         height: 200,
         borderRadius: 12,
         marginBottom: 4,
+    },
+    messageFooter: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+    },
+    messageStatus: {
+        fontSize: 10,
+        color: '#DDD',
+        marginLeft: 4,
+    },
+    messageStatusRead: {
+        color: '#87CEEB',
     },
     myMessageText: {
         color: '#FFF',
@@ -402,5 +479,22 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: Colors.secondaryText,
         fontStyle: 'italic',
+    },
+    imageViewerContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.95)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 10,
+        padding: 10,
+    },
+    fullImage: {
+        width: '100%',
+        height: '80%',
     },
 });

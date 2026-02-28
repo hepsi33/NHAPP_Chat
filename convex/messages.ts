@@ -70,3 +70,31 @@ export const markRead = mutation({
         await ctx.db.patch(args.chatId, { unreadCount: 0 });
     },
 });
+
+// Delete a message
+export const deleteMessage = mutation({
+    args: { messageId: v.id("messages") },
+    handler: async (ctx, args) => {
+        const message = await ctx.db.get(args.messageId);
+        if (message) {
+            await ctx.db.delete(args.messageId);
+        }
+    },
+});
+
+// Mark message as delivered
+export const markDelivered = mutation({
+    args: { chatId: v.id("chats") },
+    handler: async (ctx, args) => {
+        const msgs = await ctx.db
+            .query("messages")
+            .withIndex("by_chat", q => q.eq("chatId", args.chatId))
+            .collect();
+
+        for (const msg of msgs) {
+            if (msg.status === "sent") {
+                await ctx.db.patch(msg._id, { status: "delivered" });
+            }
+        }
+    },
+});
