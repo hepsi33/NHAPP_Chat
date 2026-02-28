@@ -16,6 +16,8 @@ export default function StatusScreen() {
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [statusText, setStatusText] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState<any>(null);
+    const [statusIndex, setStatusIndex] = useState(0);
 
     const handleAddStatus = async () => {
         if (!user) return;
@@ -77,12 +79,15 @@ export default function StatusScreen() {
         );
     }
 
-    const renderStatusItem = ({ item }: { item: any }) => {
+    const renderStatusItem = ({ item, index }: { item: any, index: number }) => {
         const latestStatus = item.statuses?.[item.statuses.length - 1];
         const isTextStatus = latestStatus?.type === 'text';
         
         return (
-            <TouchableOpacity style={styles.statusItem}>
+            <TouchableOpacity style={styles.statusItem} onPress={() => {
+                setSelectedStatus(item);
+                setStatusIndex(item.statuses.length - 1);
+            }}>
                 <View style={styles.statusRing}>
                     <Image
                         source={{ uri: item.user?.avatar || 'https://via.placeholder.com/150' }}
@@ -202,6 +207,62 @@ export default function StatusScreen() {
                     </View>
                 }
             />
+
+            {/* View Status Modal */}
+            <Modal
+                visible={!!selectedStatus}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setSelectedStatus(null)}
+            >
+                <View style={styles.viewStatusContainer}>
+                    <TouchableOpacity 
+                        style={styles.closeStatusButton}
+                        onPress={() => setSelectedStatus(null)}
+                    >
+                        <Text style={styles.closeStatusText}>✕</Text>
+                    </TouchableOpacity>
+                    
+                    {selectedStatus && selectedStatus.statuses && selectedStatus.statuses[statusIndex] && (
+                        <View style={styles.statusViewContent}>
+                            <View style={styles.statusViewHeader}>
+                                <Image
+                                    source={{ uri: selectedStatus.user?.avatar || 'https://via.placeholder.com/150' }}
+                                    style={styles.statusViewAvatar}
+                                />
+                                <View style={styles.statusViewInfo}>
+                                    <Text style={styles.statusViewName}>{selectedStatus.user?.name || 'User'}</Text>
+                                    <Text style={styles.statusViewTime}>
+                                        {new Date(selectedStatus.statuses[statusIndex].createdAt).toLocaleString()}
+                                    </Text>
+                                </View>
+                            </View>
+                            
+                            <View style={styles.statusViewBody}>
+                                {selectedStatus.statuses[statusIndex].type === 'text' ? (
+                                    <Text style={styles.statusViewText}>
+                                        {selectedStatus.statuses[statusIndex].text}
+                                    </Text>
+                                ) : (
+                                    <Image
+                                        source={{ uri: selectedStatus.statuses[statusIndex].fileId }}
+                                        style={styles.statusViewImage}
+                                        resizeMode="contain"
+                                    />
+                                )}
+                            </View>
+                            
+                            {selectedStatus.statuses.length > 1 && (
+                                <View style={styles.statusViewNav}>
+                                    <Text style={styles.statusViewCount}>
+                                        {statusIndex + 1} / {selectedStatus.statuses.length}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -351,5 +412,80 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#fff',
         fontWeight: '600',
+    },
+    viewStatusContainer: {
+        flex: 1,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeStatusButton: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 10,
+        padding: 10,
+    },
+    closeStatusText: {
+        fontSize: 24,
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    statusViewContent: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    statusViewHeader: {
+        position: 'absolute',
+        top: 80,
+        left: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        zIndex: 10,
+    },
+    statusViewAvatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginRight: 12,
+    },
+    statusViewInfo: {
+        justifyContent: 'center',
+    },
+    statusViewName: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    statusViewTime: {
+        fontSize: 13,
+        color: '#ccc',
+    },
+    statusViewBody: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    statusViewText: {
+        fontSize: 24,
+        color: '#fff',
+        textAlign: 'center',
+        lineHeight: 36,
+    },
+    statusViewImage: {
+        width: '100%',
+        height: '70%',
+    },
+    statusViewNav: {
+        position: 'absolute',
+        bottom: 50,
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    statusViewCount: {
+        fontSize: 16,
+        color: '#fff',
     },
 });
