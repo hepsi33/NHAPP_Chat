@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import { Mail, Search, UserPlus, User, Send } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -46,6 +45,7 @@ export default function NewChatScreen() {
 
     const createChat = useMutation(api.chats.createPrivateChat);
     const addContact = useMutation(api.contacts.addContact);
+    const sendInvite = useMutation(api.auth.sendInvite);
     const existingChats = useQuery(api.chats.getUserChats, { userId: currentUser?.uid || "" }) || [];
 
     const isEmailFormat = debouncedSearch.includes('@') && debouncedSearch.includes('.');
@@ -53,45 +53,22 @@ export default function NewChatScreen() {
     const handleInvite = async () => {
         if (!currentUser) return;
         
-        // Generate a simple referral code from user ID
-        const referralCode = currentUser.uid.substring(0, 8).toUpperCase();
-        const inviteMessage = `Join me on NHAPP - the messaging app that puts you in control!
+        try {
+            const result = await sendInvite({
+                fromEmail: currentUser.email || 'unknown',
+                fromName: currentUser.displayName || 'Someone',
+                toEmail: debouncedSearch,
+            });
 
-Use my referral code: ${referralCode}
-
-Download NHAPP and sign up with this email: ${debouncedSearch}
-
-Get started today: https://nhapp.com/download`;
-
-        const isAvailable = await Sharing.isAvailableAsync();
-        
-        if (isAvailable) {
-            Alert.alert(
-                "Invite to NHAPP",
-                "Share NHAPP with your friend via your favorite app:",
-                [
-                    { text: "Cancel", style: 'cancel' },
-                    { 
-                        text: "Share", 
-                        onPress: async () => {
-                            try {
-                                await Sharing.shareAsync(inviteMessage, {
-                                    dialogTitle: 'Invite to NHAPP',
-                                    mimeType: 'text/plain',
-                                });
-                            } catch {
-                                Alert.alert("Error", "Could not share invite.");
-                            }
-                        }
-                    }
-                ]
-            );
-        } else {
-            Alert.alert(
-                "Invite to NHAPP",
-                `Share this message with ${debouncedSearch}:\n\n${inviteMessage}`,
-                [{ text: "OK" }]
-            );
+            if (result.success) {
+                Alert.alert(
+                    "Invite Sent!",
+                    `Your invite has been sent to ${debouncedSearch}.\n\nIn production, an email would be sent with invite code: ${result.inviteCode}`,
+                    [{ text: "OK" }]
+                );
+            }
+        } catch (err: any) {
+            Alert.alert("Error", err.message || "Failed to send invite.");
         }
     };
 

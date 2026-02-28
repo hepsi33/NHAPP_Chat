@@ -5,8 +5,9 @@ import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, Tou
 import { Colors } from '../../constants/Colors';
 import { api } from "../../convex/_generated/api";
 
-export default function LoginScreen() {
+export default function SignupScreen() {
     const [email, setEmail] = useState('');
+    const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
 
     const router = useRouter();
@@ -18,11 +19,16 @@ export default function LoginScreen() {
             return;
         }
 
+        if (!name || name.trim().length < 2) {
+            Alert.alert('Invalid Name', 'Please enter your name.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            await sendOTP({ email });
-            router.push({ pathname: '/(auth)/otp', params: { email, mode: 'login' } });
+            await sendOTP({ email, name: name.trim() });
+            router.push({ pathname: '/(auth)/otp', params: { email, name, mode: 'signup' } });
         } catch (err: any) {
             Alert.alert('Error', err.message || 'Failed to send OTP.');
         } finally {
@@ -36,10 +42,19 @@ export default function LoginScreen() {
             style={styles.container}
         >
             <View style={styles.inner}>
-                <Text style={styles.title}>Welcome Back</Text>
+                <Text style={styles.title}>Create Account</Text>
                 <Text style={styles.subtitle}>
-                    Enter your email to sign in
+                    Enter your details to get started
                 </Text>
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Your Name"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    placeholderTextColor="#A0A0A0"
+                />
 
                 <TextInput
                     style={styles.input}
@@ -53,12 +68,12 @@ export default function LoginScreen() {
                 />
 
                 <TouchableOpacity
-                    style={[styles.button, (!email || loading) && styles.buttonDisabled]}
+                    style={[styles.button, (!email || !name || loading) && styles.buttonDisabled]}
                     onPress={handleSendOTP}
-                    disabled={!email || loading}
+                    disabled={!email || !name || loading}
                 >
                     <Text style={styles.buttonText}>
-                        {loading ? 'Sending...' : 'Continue'}
+                        {loading ? 'Sending...' : 'Send Verification Code'}
                     </Text>
                 </TouchableOpacity>
 
@@ -69,11 +84,11 @@ export default function LoginScreen() {
                 </View>
 
                 <TouchableOpacity
-                    style={styles.signupButton}
-                    onPress={() => router.push('/(auth)/signup' as any)}
+                    style={styles.loginButton}
+                    onPress={() => router.back()}
                 >
-                    <Text style={styles.signupText}>
-                        Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
+                    <Text style={styles.loginText}>
+                        Already have an account? <Text style={styles.loginLink}>Log In</Text>
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -149,14 +164,14 @@ const styles = StyleSheet.create({
         marginHorizontal: 10,
         color: Colors.secondaryText,
     },
-    signupButton: {
+    loginButton: {
         marginTop: 10,
     },
-    signupText: {
+    loginText: {
         color: Colors.secondaryText,
         fontSize: 14,
     },
-    signupLink: {
+    loginLink: {
         color: Colors.primary,
         fontWeight: '600',
     },

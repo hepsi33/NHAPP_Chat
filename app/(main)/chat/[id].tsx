@@ -375,16 +375,11 @@ export default function ChatScreen() {
         const isMe = item.senderId === user?.uid;
         const isImage = item.type === 'image';
         
-        // For images - try to construct the full URL
-        let imageUri = null;
-        if (isImage && item.text) {
-            const text = item.text;
-            if (text.startsWith('http')) {
-                imageUri = text;
-            } else {
-                imageUri = `https://doting-gull-823.convex.cloud/api/storage/get/${text}`;
-            }
-        }
+        // For images - construct URL from storageId
+        const CONVEX_URL = 'https://doting-gull-823.convex.cloud';
+        const imageUri = isImage && item.text ? 
+            (item.text.startsWith('http') ? item.text : `${CONVEX_URL}/api/storage/get/${item.text}`) 
+            : null;
         
         return (
             <TouchableOpacity 
