@@ -1,6 +1,5 @@
 import { v } from "convex/values";
-import { action, query } from "./_generated/server";
-import { internalMutation } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 
 const OTPs = new Map<string, { code: string; expires: number; name?: string }>();
 const invites = new Map<string, { fromEmail: string; fromName: string; expires: number }>();
@@ -41,27 +40,6 @@ async function sendEmail(to: string, subject: string, html: string) {
         throw error;
     }
 }
-
-// Internal mutation to create user
-const _internalCreateUser = internalMutation({
-    args: {
-        email: v.string(),
-        name: v.string(),
-    },
-    handler: async (ctx, args) => {
-        const userId = args.email + "_" + Date.now();
-        const id = await ctx.db.insert("users", {
-            userId,
-            email: args.email,
-            name: args.name,
-            status: "Hey there! I'm using NHAPP",
-            isOnline: true,
-            lastSeen: Date.now(),
-            createdAt: Date.now(),
-        });
-        return id;
-    },
-});
 
 export const sendOTP = action({
     args: {
@@ -116,7 +94,7 @@ export const sendOTP = action({
     },
 });
 
-export const verifyOTP = action({
+export const verifyOTP = mutation({
     args: {
         email: v.string(),
         code: v.string(),

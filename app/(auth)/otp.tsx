@@ -13,7 +13,7 @@ export default function OTPScreen() {
     const router = useRouter();
     const setUser = useAuthStore((state) => state.setUser);
 
-    const verifyOTP = useAction(api.auth.verifyOTP);
+    const verifyOTP = useMutation(api.auth.verifyOTP);
     const resendOTP = useAction(api.auth.resendOTP);
 
     const handleVerify = async () => {
