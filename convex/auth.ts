@@ -14,8 +14,8 @@ async function sendEmail(to: string, subject: string, html: string) {
     }
 
     try {
-        // Use Resend's test domain for development (emails go to memory, viewable in dashboard)
-        const fromAddress = process.env.NODE_ENV === 'production' ? 'NHAPP <noreply@nhapp.com>' : 'onboarding@resend.dev';
+        // Use Resend's test domain for development, or your verified domain in production
+        const fromAddress = process.env.NODE_ENV === 'production' ? 'NHAPP <noreply@hepsi.com>' : 'onboarding@resend.dev';
         
         const response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
