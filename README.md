@@ -1,50 +1,130 @@
-# Welcome to your Expo app 👋
+# NHAPP - WhatsApp Clone
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern messaging app built with Expo and Convex, featuring email-based identity instead of phone numbers.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Email Authentication** - Sign up/login with email and OTP verification
+- **Real-time Messaging** - Instant messaging with real-time updates
+- **Image & Video Sharing** - Share media files in chats
+- **Status Updates** - Post and view image/video statuses (like WhatsApp Status)
+- **Status Viewers** - See who viewed your status
+- **Voice Notes** - Send voice messages
+- **Chat Wallpapers** - Customize chat backgrounds
+- **Message Reactions** - React to messages with emojis
+- **Group Chats** - Create and manage group conversations
+- **Delete Account** - Permanently delete your account and data
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-2. Start the app
+- **Frontend**: React Native with Expo Router
+- **Backend**: Convex (real-time database)
+- **Email**: Resend (for OTP verification)
+- **Authentication**: Email OTP
 
-   ```bash
-   npx expo start
-   ```
+## Getting Started
 
-In the output, you'll find options to open the app in a
+### Prerequisites
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Node.js 18+
+- npm or yarn
+- Expo CLI
+- Convex account (for backend)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Installation
 
-## Get a fresh project
-
-When you're ready, run:
-
+1. Clone the repository
 ```bash
-npm run reset-project
+git clone https://github.com/hepsi33/NHAPP_Chat.git
+cd NHAPP_Chat
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Install dependencies
+```bash
+npm install
+```
 
-## Learn more
+3. Set up environment variables
+```bash
+cp .env.example .env
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+4. Configure Convex
+```bash
+npx convex dev
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+5. Set up Resend API key for email OTP
+```bash
+npx convex env set RESEND_API_KEY your_resend_api_key
+```
 
-## Join the community
+### Running the App
 
-Join our community of developers creating universal apps.
+Start the development server:
+```bash
+npx expo start
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Run on Android:
+```bash
+npx expo start --android
+```
+
+Run on iOS:
+```bash
+npx expo start --ios
+```
+
+## Project Structure
+
+```
+NHAPP/
+├── app/                    # Expo Router pages
+│   ├── (auth)/            # Authentication screens
+│   └── (main)/            # Main app screens
+│       ├── (tabs)/        # Tab navigation
+│       └── chat/          # Chat screens
+├── components/            # React components
+├── convex/                # Backend functions
+│   ├── schema.ts         # Database schema
+│   ├── auth.ts           # Authentication
+│   ├── chats.ts          # Chat operations
+│   ├── messages.ts       # Message handling
+│   └── status.ts         # Status updates
+├── hooks/                # Custom React hooks
+├── store/                # State management
+├── constants/            # App constants
+└── services/            # External services
+```
+
+## Email Setup
+
+For production email sending:
+
+1. Sign up at [Resend](https://resend.com)
+2. Add and verify your domain (e.g., hepsi.com)
+3. Add the API key to Convex:
+   ```bash
+   npx convex env set RESEND_API_KEY re_your_api_key
+   ```
+
+## Building for Production
+
+### Android
+```bash
+eas build --platform android
+```
+
+### iOS
+```bash
+eas build --platform ios
+```
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
